@@ -37,3 +37,10 @@ curl -X POST http://localhost:6942/api/registrations \
 
 The database currently stores only `name`, `email`, `id`, and `created_at`.
 Additional form fields can be added to the schema and the SQL table later.
+
+## Admin page
+
+The server-rendered admin page is available at
+`http://localhost:6942/admin`. It currently has no authentication and displays
+the saved registrations; authentication should be added before exposing this
+route publicly.
