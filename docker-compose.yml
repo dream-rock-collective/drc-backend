@@ -1,7 +1,7 @@
 services:
-  admin-site:
+  backend:
     build:
-      context: ./admin-site
+      context: .
     ports:
       - "6942:6942"
     environment:

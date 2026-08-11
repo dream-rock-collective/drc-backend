@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "admin-site",
+      "name": "drc-backend",
       "dependencies": {
         "hono": "^4.13.0",
         "postgres": "^3.4.7",
