@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { basicAuth } from "hono/basic-auth";
 import { database } from "../db";
 
 export const adminRoute = new Hono();
@@ -13,11 +12,33 @@ adminRoute.use("/admin", async (c, next) => {
     return c.text("Admin authentication is not configured", 503);
   }
 
-  return basicAuth({
-    username,
-    password,
-    realm: "Dream Rock Collective Admin",
-  })(c, next);
+  const authorization = c.req.header("Authorization");
+  const unauthorized = () => {
+    c.header("WWW-Authenticate", 'Basic realm="Dream Rock Collective Admin"');
+    return c.text("Authentication required", 401);
+  };
+
+  if (!authorization?.startsWith("Basic ")) {
+    return unauthorized();
+  }
+
+  let credentials: string;
+  try {
+    credentials = atob(authorization.slice("Basic ".length));
+  } catch {
+    return unauthorized();
+  }
+
+  const separator = credentials.indexOf(":");
+  if (
+    separator === -1 ||
+    credentials.slice(0, separator) !== username ||
+    credentials.slice(separator + 1) !== password
+  ) {
+    return unauthorized();
+  }
+
+  return next();
 });
 
 const escapeHtml = (value: string): string =>
