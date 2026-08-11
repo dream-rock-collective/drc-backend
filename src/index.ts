@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { adminRoute } from "./routes/admin";
 import { healthRoute } from "./routes/health";
 import { registrationsRoute } from "./routes/registrations";
 
@@ -13,6 +14,8 @@ app.use(
 );
 app.route("/", healthRoute);
 app.route("/", registrationsRoute);
+// Authentication should be added around this route before exposing it publicly.
+app.route("/", adminRoute);
 
 const port = 6942;
 
