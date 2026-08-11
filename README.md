@@ -6,7 +6,7 @@ of a Hono API and a PostgreSQL database.
 ## Run with Docker
 
 From the repository root, create a `.env` file with the PostgreSQL settings
-used by `docker-compose.yml`, then run:
+and admin credentials used by `docker-compose.yml`, then run:
 
 ```sh
 docker compose up --build
@@ -41,6 +41,13 @@ Additional form fields can be added to the schema and the SQL table later.
 ## Admin page
 
 The server-rendered admin page is available at
-`http://localhost:6942/admin`. It currently has no authentication and displays
-the saved registrations; authentication should be added before exposing this
-route publicly.
+`http://localhost:6942/admin`. It uses HTTP Basic Authentication with the
+following `.env` variables:
+
+```env
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-this-password
+```
+
+The route returns an error if either variable is missing. Use HTTPS when
+exposing the admin page outside a local development environment.

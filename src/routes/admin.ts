@@ -1,7 +1,24 @@
 import { Hono } from "hono";
+import { basicAuth } from "hono/basic-auth";
 import { database } from "../db";
 
 export const adminRoute = new Hono();
+
+adminRoute.use("/admin", async (c, next) => {
+  const username = process.env.ADMIN_USERNAME;
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!username || !password) {
+    console.error("Admin route is unavailable: ADMIN_USERNAME and ADMIN_PASSWORD are required");
+    return c.text("Admin authentication is not configured", 503);
+  }
+
+  return basicAuth({
+    username,
+    password,
+    realm: "Dream Rock Collective Admin",
+  })(c, next);
+});
 
 const escapeHtml = (value: string): string =>
   value

@@ -14,7 +14,6 @@ app.use(
 );
 app.route("/", healthRoute);
 app.route("/", registrationsRoute);
-// Authentication should be added around this route before exposing it publicly.
 app.route("/", adminRoute);
 
 const port = 6942;
