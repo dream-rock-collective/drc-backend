@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { database } from "../db";
 
 export const adminRoute = new Hono();
@@ -77,7 +78,7 @@ const renderPage = (content: string): string => `<!doctype html>
   </body>
 </html>`;
 
-adminRoute.get(["/admin", "/admin/"], async (c) => {
+const adminPage = async (c: Context) => {
   try {
     const registrations = await database`
       SELECT id, name, email, created_at
@@ -112,4 +113,7 @@ adminRoute.get(["/admin", "/admin/"], async (c) => {
     console.error("Could not load admin data", error);
     return c.html(renderPage('<p class="error">Could not load registrations.</p>'), 500);
   }
-});
+};
+
+adminRoute.get("/admin", adminPage);
+adminRoute.get("/admin/", adminPage);
