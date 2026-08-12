@@ -8,7 +8,7 @@ type Migration = {
 };
 
 const migrationsDirectory = join(import.meta.dir, "..", "migrations");
-const migrationPattern = /^\d+_[a-z0-9-]+\.ts$/;
+const migrationPattern = /^\d+_[a-z0-9_-]+\.ts$/;
 
 const migrationNames = (await readdir(migrationsDirectory))
   .filter((name) => migrationPattern.test(name))
