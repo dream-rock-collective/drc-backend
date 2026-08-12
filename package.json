@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
+    "migrations": "bun run scripts/run-migrations.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

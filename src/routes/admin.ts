@@ -5,8 +5,8 @@ import { database } from "../db";
 export const adminRoute = new Hono();
 
 adminRoute.use("/admin", async (c, next) => {
-  const username = process.env.ADMIN_USERNAME;
-  const password = process.env.ADMIN_PASSWORD;
+  const username = process.env["ADMIN_USERNAME"];
+  const password = process.env["ADMIN_PASSWORD"];
 
   if (!username || !password) {
     console.error("Admin route is unavailable: ADMIN_USERNAME and ADMIN_PASSWORD are required");
@@ -89,10 +89,10 @@ const adminPage = async (c: Context) => {
     const rows = registrations
       .map(
         (registration) => `<tr>
-          <td>${escapeHtml(String(registration.id))}</td>
-          <td>${escapeHtml(String(registration.name))}</td>
-          <td>${escapeHtml(String(registration.email))}</td>
-          <td>${escapeHtml(new Date(registration.created_at).toLocaleString())}</td>
+          <td>${escapeHtml(String(registration["id"]))}</td>
+          <td>${escapeHtml(String(registration["name"]))}</td>
+          <td>${escapeHtml(String(registration["email"]))}</td>
+          <td>${escapeHtml(new Date(registration["created_at"]).toLocaleString())}</td>
         </tr>`,
       )
       .join("");
