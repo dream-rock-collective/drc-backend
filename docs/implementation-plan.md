@@ -6,13 +6,35 @@ Replace the current Hono server-rendered Basic-Auth admin page with a React/Vite
 
 The migration is incremental:
 
-1. Add migration tooling and the target baseline schema.
-2. Add Better Auth, generated auth schema, admin seeding, and session middleware.
-3. Modernize the public and authenticated APIs.
-4. Remove the old Basic-Auth/server-rendered admin implementation.
-5. Add the React admin SPA, localStorage disaster-recovery mirror, export, and edit/delete controls.
-6. Serve the built SPA from Hono on the same origin.
-7. Update Docker/deployment and verify the complete flow from an empty database.
+1. ✅ Add migration tooling and the target baseline schema.
+2. ✅ Add Better Auth, generated auth schema, admin seeding, and session middleware.
+3. ✅ Modernize the public and authenticated APIs.
+4. ✅ Remove the old Basic-Auth/server-rendered admin implementation.
+5. ✅ Add the React admin SPA, localStorage disaster-recovery mirror, export, and edit/delete controls.
+6. ✅ Serve the built SPA from Hono on the same origin.
+7. ⏳ Complete Docker/deployment verification from an empty database.
+
+## Progress
+
+Completed implementation phases:
+
+- Migration runner, transactional numbered migrations, `schema_migrations`, integer registration baseline, and removal of `docker/init.sql`.
+- Better Auth mounted at `/auth/*`, generated PostgreSQL schema migration, session middleware, and idempotent `bun run seed-admin`.
+- `/register`, authenticated `/registrations`, authenticated `/modify-registration`, and database-backed `/health`.
+- React/Vite login and dashboard, localStorage mirror, export, inline edit, soft-delete UI, handwritten CSS, and Hono SPA fallback.
+- Dockerfile frontend build, same-origin static serving, deployment script, environment samples, and README documentation.
+
+Verification completed:
+
+- `bun run typecheck`
+- `bun run build`
+- Migration application and idempotent rerun against PostgreSQL.
+- Better Auth table creation and idempotent admin seeding.
+- SPA route/fallback and unauthenticated protected-route smoke checks.
+
+Remaining verification:
+
+- Full Docker rebuild and authenticated end-to-end API/browser flow. Docker Engine currently returns `Bad response from Docker engine` in this environment.
 
 ## Key decisions
 

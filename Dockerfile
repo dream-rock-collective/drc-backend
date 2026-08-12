@@ -7,5 +7,7 @@ RUN bun install --frozen-lockfile
 
 COPY . .
 
+RUN bun run build
+
 EXPOSE 6942
 CMD ["bun", "run", "start"]
