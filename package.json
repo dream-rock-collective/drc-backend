@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
+    "frontend:dev": "vite",
+    "build": "vite build",
     "migrations": "bun run scripts/run-migrations.ts",
     "seed-admin": "bun run scripts/seed-admin.ts",
     "typecheck": "tsc --noEmit"
@@ -14,11 +16,17 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
     "better-auth": "^1.6.27",
     "hono": "^4.13.0",
     "kysely": "^0.29.5",
     "kysely-postgres-js": "^3.0.0",
     "postgres": "^3.4.7",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "vite": "^8.2.1",
     "zod": "^4.1.12"
   }
 }

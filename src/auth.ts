@@ -17,7 +17,6 @@ export const createAuth = (disableSignUp: boolean) =>
     database: {
       db: kysely,
       type: "postgres",
-      casing: "snake",
       transaction: true,
     },
     baseURL,

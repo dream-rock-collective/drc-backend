@@ -4,10 +4,11 @@
     "module": "ESNext",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "lib": ["ESNext", "DOM"],
-    "types": ["bun"],
+    "types": ["bun", "react", "react-dom"],
     "noEmit": true,
     "skipLibCheck": true,
 
