@@ -8,8 +8,7 @@ const app = new Hono();
 app.use(
   "/*",
   cors({
-    origin:
-      process.env.REGISTRATION_SITE_ORIGIN ?? "http://localhost:5173",
+    origin: process.env.REGISTRATION_SITE_ORIGIN ?? "http://localhost:5173",
   }),
 );
 app.route("/", healthRoute);

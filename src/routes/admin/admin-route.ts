@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { database } from "../db";
+import { database } from "../../db";
 
 export const adminRoute = new Hono();
 
@@ -9,7 +9,9 @@ adminRoute.use("/admin", async (c, next) => {
   const password = process.env.ADMIN_PASSWORD;
 
   if (!username || !password) {
-    console.error("Admin route is unavailable: ADMIN_USERNAME and ADMIN_PASSWORD are required");
+    console.error(
+      "Admin route is unavailable: ADMIN_USERNAME and ADMIN_PASSWORD are required",
+    );
     return c.text("Admin authentication is not configured", 503);
   }
 
@@ -50,7 +52,8 @@ const escapeHtml = (value: string): string =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 
-const renderPage = (content: string): string => `<!doctype html>
+const renderPage = (content: string): string => `
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
@@ -111,7 +114,10 @@ const adminPage = async (c: Context) => {
     return c.html(renderPage(table));
   } catch (error) {
     console.error("Could not load admin data", error);
-    return c.html(renderPage('<p class="error">Could not load registrations.</p>'), 500);
+    return c.html(
+      renderPage('<p class="error">Could not load registrations.</p>'),
+      500,
+    );
   }
 };
 
