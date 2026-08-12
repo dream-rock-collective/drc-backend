@@ -9,7 +9,7 @@ app.use(
   "/*",
   cors({
     origin:
-      process.env.REGISTRATION_SITE_ORIGIN ?? "http://localhost:5173",
+      process.env["REGISTRATION_SITE_ORIGIN"] ?? "http://localhost:5173",
   }),
 );
 app.route("/", healthRoute);
