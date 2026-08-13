@@ -5,8 +5,8 @@ needs the two unauthenticated endpoints documented here.
 
 ## Base URL
 
-Use the deployed backend origin as the base URL. For local development, the
-backend runs at `http://localhost:6942`.
+Use `https://api.dreamrock.co` as the production base URL. For local
+development, the backend runs at `http://localhost:6942`.
 
 The backend allows browser requests from the origin configured by
 `REGISTRATION_SITE_ORIGIN` (default: `http://localhost:5173`).
@@ -57,8 +57,8 @@ Request body:
 
 ```json
 {
-  "name": "Leeya Appleby",
-  "email": "leeya@example.com",
+  "name": "Jordan Alvarez",
+  "email": "jordan@example.com",
   "address": "123 Main St"
 }
 ```
@@ -90,8 +90,8 @@ Created response (`201`):
 {
   "registration": {
     "id": 42,
-    "name": "Leeya Appleby",
-    "email": "leeya@example.com",
+    "name": "Jordan Alvarez",
+    "email": "jordan@example.com",
     "address": "123 Main St",
     "created_at": "2026-08-12T18:03:00.000Z"
   }
