@@ -12,7 +12,7 @@ The migration is incremental:
 4. ✅ Remove the old Basic-Auth/server-rendered admin implementation.
 5. ✅ Add the React admin SPA, localStorage disaster-recovery mirror, export, and edit/delete controls.
 6. ✅ Serve the built SPA from Hono on the same origin.
-7. ⏳ Complete Docker/deployment verification from an empty database.
+7. ✅ Complete Docker/deployment verification from an empty database.
 
 ## Progress
 
@@ -34,7 +34,9 @@ Verification completed:
 
 Remaining verification:
 
-- Full Docker rebuild and authenticated end-to-end API/browser flow. Docker Engine currently returns `Bad response from Docker engine` in this environment.
+- The Docker image rebuild and Compose startup are now verified.
+- The authenticated curl flow is verified for login, session cookies, protected reads, edit, soft delete, deleted-record retention, and logout.
+- A truly empty-volume rebuild remains a manual destructive check because the current Compose volume contains test data and was intentionally preserved.
 
 ## Key decisions
 

@@ -58,7 +58,7 @@ Create a registration with:
 ```sh
 curl -X POST http://localhost:6942/register \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Leeya Appleby","email":"leeya@example.com","address":"123 Main St"}'
+  -d '{"name":"Jordan Alvarez","email":"jordan@example.com","address":"123 Main St"}'
 ```
 
 `GET /health` performs a lightweight PostgreSQL check.
