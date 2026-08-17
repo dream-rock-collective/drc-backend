@@ -7,9 +7,9 @@ import { healthRoute } from "./routes/health";
 import { registrationsRoute } from "./routes/registrations";
 
 const app = new Hono<{ Variables: SessionVariables }>();
+const configuredRegistrationSiteOrigin = process.env["REGISTRATION_SITE_ORIGIN"]?.trim();
 const publicCors = cors({
-  origin:
-    process.env["REGISTRATION_SITE_ORIGIN"] ?? "http://localhost:5173",
+  origin: configuredRegistrationSiteOrigin || "http://localhost:5173",
 });
 
 app.use(

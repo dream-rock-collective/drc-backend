@@ -9,7 +9,8 @@ Use `https://api.dreamrock.co` as the production base URL. For local
 development, the backend runs at `http://localhost:6942`.
 
 The backend allows browser requests from the origin configured by
-`REGISTRATION_SITE_ORIGIN` (default: `http://localhost:5173`).
+`REGISTRATION_SITE_ORIGIN`. Docker deployments default to
+`https://dreamrock.co`; direct local runs default to `http://localhost:5173`.
 
 ## Check backend health
 
