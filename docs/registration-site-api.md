@@ -130,3 +130,29 @@ Unexpected database failure (`500`):
 
 Treat any non-`2xx` response as unsuccessful and do not show a success state to
 the visitor. A successful response means the registration has been persisted.
+
+## Create a Checkout Session
+
+```http
+POST /create-checkout-session
+Content-Type: application/json
+```
+
+Request body:
+
+```json
+{
+  "registrationId": 42,
+  "plan": "monthly"
+}
+```
+
+`plan` must be `once`, `monthly`, or `yearly`. The response contains a hosted
+Stripe Checkout URL:
+
+```json
+{ "url": "https://checkout.stripe.com/..." }
+```
+
+The registration is marked paid only after Stripe sends a signed
+`checkout.session.completed` event to `POST /webhooks/stripe`.

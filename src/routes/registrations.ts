@@ -25,6 +25,10 @@ type RegistrationRow = {
   email: string;
   address: string;
   stripe_payment_id: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  plan: "once" | "monthly" | "yearly" | null;
+  payment_status: "pending" | "paid" | "failed";
   created_at: Date;
   deleted_at: Date | null;
 };
@@ -35,6 +39,10 @@ const toAdminRegistration = (registration: RegistrationRow) => ({
   email: registration.email,
   address: registration.address,
   stripe_payment_id: registration.stripe_payment_id,
+  stripe_customer_id: registration.stripe_customer_id,
+  stripe_subscription_id: registration.stripe_subscription_id,
+  plan: registration.plan,
+  payment_status: registration.payment_status,
   created_at: registration.created_at,
   deleted: registration.deleted_at !== null,
 });
@@ -93,7 +101,8 @@ registrationsRoute.get("/registrations", async (c) => {
 
   try {
     const registrations = await database<RegistrationRow[]>`
-      SELECT id, name, email, address, stripe_payment_id, created_at, deleted_at
+      SELECT id, name, email, address, stripe_payment_id, stripe_customer_id,
+        stripe_subscription_id, plan, payment_status, created_at, deleted_at
       FROM registrations
       ORDER BY created_at DESC, id DESC
     `;
@@ -150,7 +159,8 @@ registrationsRoute.post("/modify-registration", async (c) => {
           UPDATE registrations
           SET deleted_at = NOW()
           WHERE id = ${id}
-          RETURNING id, name, email, address, stripe_payment_id, created_at, deleted_at
+          RETURNING id, name, email, address, stripe_payment_id, stripe_customer_id,
+            stripe_subscription_id, plan, payment_status, created_at, deleted_at
         `
       : await database<RegistrationRow[]>`
           UPDATE registrations
@@ -159,7 +169,8 @@ registrationsRoute.post("/modify-registration", async (c) => {
             email = COALESCE(${result.data.data.email?.toLowerCase() ?? null}, email),
             address = COALESCE(${result.data.data.address ?? null}, address)
           WHERE id = ${id}
-          RETURNING id, name, email, address, stripe_payment_id, created_at, deleted_at
+          RETURNING id, name, email, address, stripe_payment_id, stripe_customer_id,
+            stripe_subscription_id, plan, payment_status, created_at, deleted_at
         `;
 
     if (!registration) {

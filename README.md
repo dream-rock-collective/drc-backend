@@ -16,6 +16,11 @@ ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-this-admin-password
 BETTER_AUTH_SECRET=replace-with-a-long-random-secret
 BETTER_AUTH_URL=http://localhost:6942
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_ONCE=price_...
+STRIPE_PRICE_MONTHLY=price_...
+STRIPE_PRICE_YEARLY=price_...
 ```
 
 Run the database, migrations, admin seed, and application explicitly:
@@ -62,6 +67,15 @@ curl -X POST http://localhost:6942/register \
 ```
 
 `GET /health` performs a lightweight PostgreSQL check.
+
+The public payment endpoints are:
+
+- `POST /create-checkout-session` with `{ "registrationId": 42, "plan": "once" | "monthly" | "yearly" }`; returns the hosted Stripe Checkout URL.
+- `POST /webhooks/stripe`; configure Stripe to send signed events here. The webhook records completed Checkout Sessions on the registration.
+
+Use Stripe test-mode keys and prices for local development. For local webhook
+delivery, run `stripe listen --forward-to localhost:6942/webhooks/stripe` and
+use the signing secret it prints as `STRIPE_WEBHOOK_SECRET`.
 
 ## Admin SPA
 
