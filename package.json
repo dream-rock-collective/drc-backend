@@ -12,7 +12,9 @@
     "rebuild": "bash scripts/deploy.sh",
     "smoke-api": "bun run scripts/smoke-api.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "stylelint \"src/**/*.css\""
+    "lint": "bun run lint:css && bun run typecheck",
+    "lint:css": "stylelint \"src/**/*.css\"",
+    "format:css": "stylelint \"src/**/*.css\" --fix"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
