@@ -63,7 +63,7 @@ Create a registration with:
 ```sh
 curl -X POST http://localhost:6942/register \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Jordan Alvarez","email":"jordan@example.com","address":"123 Main St"}'
+  -d '{"name":"Jordan Alvarez","email":"jordan@example.com","address":"123 Main St","birthday":"April 12"}'
 ```
 
 `GET /health` performs a lightweight PostgreSQL check.
@@ -71,7 +71,12 @@ curl -X POST http://localhost:6942/register \
 The public payment endpoints are:
 
 - `POST /create-checkout-session` with `{ "registrationId": 42, "plan": "once" | "monthly" | "yearly" }`; returns the hosted Stripe Checkout URL.
+- `POST /submit-allocation` with `{ "userId": "42", "allocation": { "charityKey": 5 } }`; stores a verified-budget allocation submission.
 - `POST /webhooks/stripe`; configure Stripe to send signed events here. The webhook records completed Checkout Sessions on the registration.
+
+Checkout success returns to the registration site's `/allocate-payment/` page.
+Allocation keys are generic frontend-owned JSON keys; the backend validates
+only nonnegative integer values and the verified total.
 
 Use Stripe test-mode keys and prices for local development. For local webhook
 delivery, run `stripe listen --forward-to localhost:6942/webhooks/stripe` and

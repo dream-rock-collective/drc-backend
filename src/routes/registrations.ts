@@ -228,6 +228,11 @@ registrationsRoute.post("/modify-registration", async (c) => {
 
     return c.json(toAdminRegistration(registration));
   } catch (error) {
+    if (error instanceof Error &&
+      (error.message === "A paid plan is required for an allocation" ||
+        error.message.startsWith("Allocation total must equal"))) {
+      return c.json({ error: error.message }, 400);
+    }
     console.error("Could not modify registration", error);
     return c.json({ error: "Could not modify registration" }, 500);
   }
