@@ -60,11 +60,13 @@ Request body:
 {
   "name": "Jordan Alvarez",
   "email": "jordan@example.com",
-  "address": "123 Main St"
+  "address": "123 Main St",
+  "birthday": "April 12"
 }
 ```
 
-All three fields are required. `name` and `address` must contain 1–200 and
+`name`, `email`, and `address` are required. `birthday` is optional raw text.
+`name` and `address` must contain 1–200 and
 1–500 characters respectively; `email` must be a valid email address and may
 contain up to 320 characters. Leading and trailing whitespace is removed. The
 email is stored in lowercase.
@@ -79,6 +81,7 @@ const response = await fetch(`${API_BASE_URL}/register`, {
     name,
     email,
     address,
+    birthday,
   }),
 });
 
@@ -130,3 +133,31 @@ Unexpected database failure (`500`):
 
 Treat any non-`2xx` response as unsuccessful and do not show a success state to
 the visitor. A successful response means the registration has been persisted.
+
+## Create a Checkout Session
+
+```http
+POST /create-checkout-session
+Content-Type: application/json
+```
+
+Request body:
+
+```json
+{
+  "userId": 42,
+  "plan": "monthly"
+}
+```
+
+`plan` must be `once`, `monthly`, or `yearly`. The response contains a hosted
+Stripe Checkout URL:
+
+```json
+{ "url": "https://checkout.stripe.com/..." }
+```
+
+The registration is marked paid only after Stripe sends a signed
+`checkout.session.completed` event to `POST /webhooks/stripe`. Successful
+Checkout sessions return to `/allocate-payment/`; canceled sessions return to
+`/registered/`.

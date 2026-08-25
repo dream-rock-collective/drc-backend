@@ -22,6 +22,31 @@ const redirectToLogin = (): void => {
   window.dispatchEvent(new PopStateEvent("popstate"));
 };
 
+const planLabel = (plan: Registration["plan"]): string => {
+  if (plan === "once") return "One-time";
+  if (plan === "monthly") return "Monthly";
+  if (plan === "yearly") return "Yearly";
+  return "—";
+};
+
+const paymentIdentifier = (value: string | null) => (
+  value ? <code className="payment-id" title={value}>{value}</code> : <span className="muted">—</span>
+);
+
+const allocationView = (allocation: Record<string, number> | null) => {
+  if (!allocation) return <span className="muted">—</span>;
+  return (
+    <div className="allocation-list">
+      {Object.entries(allocation).map(([charity, amount]) => (
+        <div className="allocation-item" key={charity}>
+          <span title={charity}>{charity}</span>
+          <strong>${amount}</strong>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export const App = () => {
   const [path, setPath] = useState(window.location.pathname);
 
@@ -163,7 +188,11 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
       {loading && registrations.length === 0 ? <p className="muted">Loading registrations…</p> : (
         <section className="table-card">
           <table>
-            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Address</th><th>Created</th><th>Actions</th></tr></thead>
+            <thead><tr>
+              <th>ID</th><th>Name</th><th>Email</th><th>Address</th><th>Birthday</th><th>Created</th>
+              <th>Payment status</th><th>Plan</th><th>Payment ID</th><th>Customer ID</th>
+              <th>Subscription ID</th><th>Allotments</th><th>Actions</th>
+            </tr></thead>
             <tbody>
               {visibleRegistrations.map((registration) => (
                 <RegistrationRow
@@ -198,15 +227,33 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
   const [name, setName] = useState(registration.name);
   const [email, setEmail] = useState(registration.email);
   const [address, setAddress] = useState(registration.address);
+  const [birthday, setBirthday] = useState(registration.birthday ?? "");
+  const [allocationText, setAllocationText] = useState(
+    registration.latest_allocation ? JSON.stringify(registration.latest_allocation) : "",
+  );
   const [busy, setBusy] = useState(false);
 
   if (editing) {
     const save = async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      const data: { name?: string; email?: string; address?: string } = {};
+      const data: {
+        name?: string; email?: string; address?: string; birthday?: string | null;
+        allocation?: Record<string, number>;
+      } = {};
       if (name !== registration.name) data.name = name;
       if (email !== registration.email) data.email = email;
       if (address !== registration.address) data.address = address;
+      if (birthday !== (registration.birthday ?? "")) data.birthday = birthday || null;
+      if (allocationText !== (registration.latest_allocation ? JSON.stringify(registration.latest_allocation) : "")) {
+        try {
+          const parsed: unknown = JSON.parse(allocationText);
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+          data.allocation = parsed as Record<string, number>;
+        } catch {
+          onError("Allotments must be a valid JSON object");
+          return;
+        }
+      }
       if (Object.keys(data).length === 0) return onCancel();
       setBusy(true);
       try {
@@ -218,10 +265,12 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
       }
     };
 
-    return <tr><td colSpan={6}><form className="inline-form" onSubmit={save}>
+    return <tr><td colSpan={13}><form className="inline-form" onSubmit={save}>
       <input aria-label="Name" value={name} onChange={(event) => setName(event.target.value)} required />
       <input aria-label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
       <input aria-label="Address" value={address} onChange={(event) => setAddress(event.target.value)} required />
+      <input aria-label="Birthday" value={birthday} onChange={(event) => setBirthday(event.target.value)} />
+      <textarea aria-label="Allotments JSON" value={allocationText} onChange={(event) => setAllocationText(event.target.value)} placeholder="{ &quot;charityKey&quot;: 1 }" />
       <button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
       <button type="button" className="secondary" onClick={onCancel}>Cancel</button>
     </form></td></tr>;
@@ -232,7 +281,16 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
     <td>{registration.name}</td>
     <td>{registration.email}</td>
     <td>{registration.address}</td>
+    <td>{registration.birthday || <span className="muted">—</span>}</td>
     <td>{new Date(registration.created_at).toLocaleString()}</td>
+    <td><span className={`payment-status payment-status-${registration.payment_status}`}>
+      {registration.payment_status}
+    </span></td>
+    <td>{planLabel(registration.plan)}</td>
+    <td>{paymentIdentifier(registration.stripe_payment_id)}</td>
+    <td>{paymentIdentifier(registration.stripe_customer_id)}</td>
+    <td>{paymentIdentifier(registration.stripe_subscription_id)}</td>
+    <td className="allocation-cell">{allocationView(registration.latest_allocation)}</td>
     <td className="row-actions"><button type="button" className="link-button" onClick={onEdit}>Edit</button><button type="button" className="link-button danger" onClick={onDelete}>Delete</button></td>
   </tr>;
 };

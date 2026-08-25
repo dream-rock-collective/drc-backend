@@ -16,6 +16,11 @@ ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-this-admin-password
 BETTER_AUTH_SECRET=replace-with-a-long-random-secret
 BETTER_AUTH_URL=http://localhost:6942
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_ONCE=price_...
+STRIPE_PRICE_MONTHLY=price_...
+STRIPE_PRICE_YEARLY=price_...
 ```
 
 Run the database, migrations, admin seed, and application explicitly:
@@ -58,10 +63,24 @@ Create a registration with:
 ```sh
 curl -X POST http://localhost:6942/register \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Jordan Alvarez","email":"jordan@example.com","address":"123 Main St"}'
+  -d '{"name":"Jordan Alvarez","email":"jordan@example.com","address":"123 Main St","birthday":"April 12"}'
 ```
 
 `GET /health` performs a lightweight PostgreSQL check.
+
+The public payment endpoints are:
+
+- `POST /create-checkout-session` with `{ "userId": 42, "plan": "once" | "monthly" | "yearly" }`; returns the hosted Stripe Checkout URL.
+- `POST /submit-allocation` with `{ "userId": "42", "allocation": { "charityKey": 5 } }`; stores an allocation submission for a paid registration.
+- `POST /webhooks/stripe`; configure Stripe to send signed events here. The webhook records completed Checkout Sessions on the registration.
+
+Checkout success returns to the registration site's `/allocate-payment/` page.
+Allocation keys and totals are frontend-owned JSON; the backend validates only
+the payload shape and that the registration has been paid.
+
+Use Stripe test-mode keys and prices for local development. For local webhook
+delivery, run `stripe listen --forward-to localhost:6942/webhooks/stripe` and
+use the signing secret it prints as `STRIPE_WEBHOOK_SECRET`.
 
 ## Admin SPA
 

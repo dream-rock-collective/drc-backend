@@ -19,8 +19,18 @@ h1 { margin: .2rem 0 0; font-size: clamp(2rem, 5vw, 3.4rem); letter-spacing: -.0
 .table-card { overflow-x: auto; background: #fffdf8; border: 1px solid #d9d4c8; border-radius: 14px; box-shadow: 0 12px 30px #18251f0c; }
 table { width: 100%; border-collapse: collapse; text-align: left; }
 th, td { padding: 1rem; border-bottom: 1px solid #ebe6dc; white-space: nowrap; }
+.allocation-cell { min-width: 270px; max-width: 340px; white-space: normal; vertical-align: middle; }
+.allocation-list { display: grid; gap: .35rem; text-align: left; }
+.allocation-item { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; padding: .25rem .45rem; background: #f3f0e8; border-radius: 5px; }
+.allocation-item span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.allocation-item strong { flex: 0 0 auto; color: #27633c; }
 th { color: #647168; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; }
 tr:last-child td { border-bottom: 0; }
+.payment-status { display: inline-block; padding: .3rem .55rem; border-radius: 999px; font-size: .78rem; font-weight: 700; text-transform: capitalize; }
+.payment-status-pending { color: #72591c; background: #f6eac4; }
+.payment-status-paid { color: #27633c; background: #dcefe1; }
+.payment-status-failed { color: #8d3021; background: #fbe9e2; }
+.payment-id { display: inline-block; max-width: 180px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; color: #46574d; font-size: .78rem; }
 button { border: 0; border-radius: 999px; padding: .7rem 1rem; color: #fffdf8; background: #b44d2d; font-weight: 700; }
 button:disabled { cursor: wait; opacity: .6; }
 button.secondary { color: #18251f; background: #e2ded2; }
@@ -33,5 +43,6 @@ button.secondary { color: #18251f; background: #e2ded2; }
 .stack-form { display: grid; gap: 1rem; margin-top: 1.5rem; }
 label { display: grid; gap: .4rem; color: #46574d; font-size: .9rem; font-weight: 700; }
 input { width: 100%; padding: .75rem .8rem; color: #18251f; background: #fff; border: 1px solid #c9c3b6; border-radius: 8px; }
-.inline-form { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)) auto auto; gap: .6rem; align-items: center; }
+.inline-form { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)) minmax(180px, 1.5fr) auto auto; gap: .6rem; align-items: center; }
+textarea { width: 100%; min-height: 4rem; padding: .75rem .8rem; border: 1px solid #c9c3b6; border-radius: 8px; font: inherit; }
 @media (max-width: 800px) { .page-header { align-items: start; flex-direction: column; } .inline-form { grid-template-columns: 1fr; } }

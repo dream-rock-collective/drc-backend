@@ -40,7 +40,13 @@ export const fetchRegistrations = async (): Promise<Registration[]> => {
 export const modifyRegistration = async (
   request:
     | { type: "delete"; id: number }
-    | { type: "edit"; id: number; data: Partial<Pick<Registration, "name" | "email" | "address">> },
+    | { type: "edit"; id: number; data: {
+        name?: string;
+        email?: string;
+        address?: string;
+        birthday?: string | null;
+        allocation?: Record<string, number>;
+      } },
 ): Promise<Registration> => {
   const response = await fetch("/modify-registration", {
     method: "POST",
