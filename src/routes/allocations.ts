@@ -2,9 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../db";
 import {
-  allocationBudget,
   allocationSchema,
-  allocationTotal,
   insertAllocation,
 } from "../allocation";
 import type { SessionVariables } from "../middleware/session";
@@ -48,21 +46,15 @@ allocationsRoute.post("/submit-allocation", async (c) => {
   try {
     const [registration] = await database<{
       payment_status: "pending" | "paid" | "failed";
-      plan: "once" | "monthly" | "yearly" | null;
     }[]>`
-      SELECT payment_status, plan
+      SELECT payment_status
       FROM registrations
       WHERE id = ${userId} AND deleted_at IS NULL
     `;
 
     if (!registration) return c.json({ error: "Registration not found" }, 404);
-    if (registration.payment_status !== "paid" || !registration.plan) {
+    if (registration.payment_status !== "paid") {
       return c.json({ error: "A completed payment is required" }, 403);
-    }
-
-    const budget = allocationBudget(registration.plan);
-    if (allocationTotal(allocation) !== budget) {
-      return c.json({ error: `Allocation total must equal $${budget}` }, 400);
     }
 
     const allocationId = await insertAllocation(database, userId, allocation);

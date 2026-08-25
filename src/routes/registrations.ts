@@ -1,9 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import {
-  allocationBudget,
   allocationSchema,
-  allocationTotal,
   insertAllocation,
 } from "../allocation";
 import { database } from "../db";
@@ -184,14 +182,10 @@ registrationsRoute.post("/modify-registration", async (c) => {
       } else {
         const { data } = result.data;
         if (data.allocation) {
-          const [current] = await sql<{ plan: "once" | "monthly" | "yearly" | null }[]>`
-            SELECT plan FROM registrations WHERE id = ${id}
+          const [current] = await sql<{ id: number }[]>`
+            SELECT id FROM registrations WHERE id = ${id}
           `;
           if (!current) return [] as RegistrationRow[];
-          if (!current.plan) throw new Error("A paid plan is required for an allocation");
-          if (allocationTotal(data.allocation) !== allocationBudget(current.plan)) {
-            throw new Error(`Allocation total must equal $${allocationBudget(current.plan)}`);
-          }
           await insertAllocation(sql, id, data.allocation);
         }
         await sql`
@@ -228,11 +222,6 @@ registrationsRoute.post("/modify-registration", async (c) => {
 
     return c.json(toAdminRegistration(registration));
   } catch (error) {
-    if (error instanceof Error &&
-      (error.message === "A paid plan is required for an allocation" ||
-        error.message.startsWith("Allocation total must equal"))) {
-      return c.json({ error: error.message }, 400);
-    }
     console.error("Could not modify registration", error);
     return c.json({ error: "Could not modify registration" }, 500);
   }

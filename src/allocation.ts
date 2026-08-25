@@ -8,14 +8,6 @@ export const allocationSchema = z.record(
 
 export type Allocation = z.infer<typeof allocationSchema>;
 
-export const allocationBudget = (plan: "once" | "monthly" | "yearly"): number => {
-  if (plan === "once") return 6;
-  return 5;
-};
-
-export const allocationTotal = (allocation: Allocation): number =>
-  Object.values(allocation).reduce((total, amount) => total + amount, 0);
-
 export const insertAllocation = async (
   sql: Sql | TransactionSql,
   registrationId: number,
