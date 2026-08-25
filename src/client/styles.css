@@ -19,6 +19,11 @@ h1 { margin: .2rem 0 0; font-size: clamp(2rem, 5vw, 3.4rem); letter-spacing: -.0
 .table-card { overflow-x: auto; background: #fffdf8; border: 1px solid #d9d4c8; border-radius: 14px; box-shadow: 0 12px 30px #18251f0c; }
 table { width: 100%; border-collapse: collapse; text-align: left; }
 th, td { padding: 1rem; border-bottom: 1px solid #ebe6dc; white-space: nowrap; }
+tbody tr:has(.allocation-cell) td { min-height: 8rem; height: 8rem; white-space: normal; vertical-align: middle; text-align: center; }
+.allocation-cell { min-width: 220px; }
+.allocation-list { display: grid; gap: .35rem; text-align: left; }
+.allocation-list div { display: flex; justify-content: space-between; gap: 1rem; }
+.allocation-list span { overflow-wrap: anywhere; }
 th { color: #647168; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; }
 tr:last-child td { border-bottom: 0; }
 .payment-status { display: inline-block; padding: .3rem .55rem; border-radius: 999px; font-size: .78rem; font-weight: 700; text-transform: capitalize; }
@@ -38,5 +43,6 @@ button.secondary { color: #18251f; background: #e2ded2; }
 .stack-form { display: grid; gap: 1rem; margin-top: 1.5rem; }
 label { display: grid; gap: .4rem; color: #46574d; font-size: .9rem; font-weight: 700; }
 input { width: 100%; padding: .75rem .8rem; color: #18251f; background: #fff; border: 1px solid #c9c3b6; border-radius: 8px; }
-.inline-form { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)) auto auto; gap: .6rem; align-items: center; }
+.inline-form { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)) minmax(180px, 1.5fr) auto auto; gap: .6rem; align-items: center; }
+textarea { width: 100%; min-height: 4rem; padding: .75rem .8rem; border: 1px solid #c9c3b6; border-radius: 8px; font: inherit; }
 @media (max-width: 800px) { .page-header { align-items: start; flex-direction: column; } .inline-form { grid-template-columns: 1fr; } }

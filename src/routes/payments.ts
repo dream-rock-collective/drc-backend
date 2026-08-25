@@ -78,8 +78,8 @@ paymentsRoute.post("/create-checkout-session", async (c) => {
       metadata: { plan },
       customer_email: registration.email,
       ...(plan === "once" ? { customer_creation: "always" as const } : {}),
-      success_url: `${getRegistrationSiteOrigin()}/success`,
-      cancel_url: `${getRegistrationSiteOrigin()}/registered`,
+      success_url: `${getRegistrationSiteOrigin()}/allocate-payment/`,
+      cancel_url: `${getRegistrationSiteOrigin()}/registered/`,
     });
 
     if (!session.url) {

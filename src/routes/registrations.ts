@@ -1,5 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import {
+  allocationBudget,
+  allocationSchema,
+  allocationTotal,
+  insertAllocation,
+} from "../allocation";
 import { database } from "../db";
 import type { SessionVariables } from "../middleware/session";
 
@@ -11,6 +17,7 @@ const registrationFields = {
   name: z.string().trim().min(1, "Name is required").max(200),
   email: z.string().trim().email("A valid email is required").max(320),
   address: z.string().trim().min(1, "Address is required").max(500),
+  birthday: z.string().max(100).nullable().optional(),
 };
 
 const registrationSchema = z.object(registrationFields);
@@ -27,10 +34,12 @@ type RegistrationRow = {
   stripe_payment_id: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
+  birthday: string | null;
   plan: "once" | "monthly" | "yearly" | null;
   payment_status: "pending" | "paid" | "failed";
   created_at: Date;
   deleted_at: Date | null;
+  latest_allocation: Record<string, number> | null;
 };
 
 const toAdminRegistration = (registration: RegistrationRow) => ({
@@ -38,11 +47,13 @@ const toAdminRegistration = (registration: RegistrationRow) => ({
   name: registration.name,
   email: registration.email,
   address: registration.address,
+  birthday: registration.birthday,
   stripe_payment_id: registration.stripe_payment_id,
   stripe_customer_id: registration.stripe_customer_id,
   stripe_subscription_id: registration.stripe_subscription_id,
   plan: registration.plan,
   payment_status: registration.payment_status,
+  latest_allocation: registration.latest_allocation,
   created_at: registration.created_at,
   deleted: registration.deleted_at !== null,
 });
@@ -71,7 +82,7 @@ registrationsRoute.post("/register", async (c) => {
     );
   }
 
-  const { name, address } = result.data;
+  const { name, address, birthday } = result.data;
   const email = result.data.email.toLowerCase();
 
   try {
@@ -80,11 +91,12 @@ registrationsRoute.post("/register", async (c) => {
       name: string;
       email: string;
       address: string;
+      birthday: string | null;
       created_at: Date;
     }[]>`
-      INSERT INTO registrations (name, email, address)
-      VALUES (${name}, ${email}, ${address})
-      RETURNING id, name, email, address, created_at
+      INSERT INTO registrations (name, email, address, birthday)
+      VALUES (${name}, ${email}, ${address}, ${birthday ?? null})
+      RETURNING id, name, email, address, birthday, created_at
     `;
 
     return c.json({ registration }, 201);
@@ -102,8 +114,16 @@ registrationsRoute.get("/registrations", async (c) => {
   try {
     const registrations = await database<RegistrationRow[]>`
       SELECT id, name, email, address, stripe_payment_id, stripe_customer_id,
-        stripe_subscription_id, plan, payment_status, created_at, deleted_at
+        stripe_subscription_id, birthday, plan, payment_status, created_at, deleted_at,
+        latest.allocation AS latest_allocation
       FROM registrations
+      LEFT JOIN LATERAL (
+        SELECT allocation
+        FROM allocations
+        WHERE allocations.registration_id = registrations.id
+        ORDER BY submitted_at DESC, id DESC
+        LIMIT 1
+      ) AS latest ON TRUE
       ORDER BY created_at DESC, id DESC
     `;
 
@@ -119,7 +139,7 @@ const modificationSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("edit"),
     id: z.string().trim().min(1),
-    data: editSchema,
+    data: editSchema.extend({ allocation: allocationSchema.optional() }),
   }),
 ]);
 
@@ -154,24 +174,53 @@ registrationsRoute.post("/modify-registration", async (c) => {
   }
 
   try {
-    const [registration] = result.data.type === "delete"
-      ? await database<RegistrationRow[]>`
+    const [registration] = await database.begin(async (sql) => {
+      if (result.data.type === "delete") {
+        await sql`
           UPDATE registrations
           SET deleted_at = NOW()
           WHERE id = ${id}
-          RETURNING id, name, email, address, stripe_payment_id, stripe_customer_id,
-            stripe_subscription_id, plan, payment_status, created_at, deleted_at
-        `
-      : await database<RegistrationRow[]>`
+        `;
+      } else {
+        const { data } = result.data;
+        if (data.allocation) {
+          const [current] = await sql<{ plan: "once" | "monthly" | "yearly" | null }[]>`
+            SELECT plan FROM registrations WHERE id = ${id}
+          `;
+          if (!current) return [] as RegistrationRow[];
+          if (!current.plan) throw new Error("A paid plan is required for an allocation");
+          if (allocationTotal(data.allocation) !== allocationBudget(current.plan)) {
+            throw new Error(`Allocation total must equal $${allocationBudget(current.plan)}`);
+          }
+          await insertAllocation(sql, id, data.allocation);
+        }
+        await sql`
           UPDATE registrations
           SET
-            name = COALESCE(${result.data.data.name ?? null}, name),
-            email = COALESCE(${result.data.data.email?.toLowerCase() ?? null}, email),
-            address = COALESCE(${result.data.data.address ?? null}, address)
+            name = COALESCE(${data.name ?? null}, name),
+            email = COALESCE(${data.email?.toLowerCase() ?? null}, email),
+            address = COALESCE(${data.address ?? null}, address),
+            birthday = CASE WHEN ${data.birthday !== undefined} THEN ${data.birthday ?? null} ELSE birthday END
           WHERE id = ${id}
-          RETURNING id, name, email, address, stripe_payment_id, stripe_customer_id,
-            stripe_subscription_id, plan, payment_status, created_at, deleted_at
         `;
+      }
+
+      return sql<RegistrationRow[]>`
+        SELECT registrations.id, name, email, address, stripe_payment_id,
+          stripe_customer_id, stripe_subscription_id, birthday, plan,
+          payment_status, created_at, deleted_at,
+          latest.allocation AS latest_allocation
+        FROM registrations
+        LEFT JOIN LATERAL (
+          SELECT allocation
+          FROM allocations
+          WHERE allocations.registration_id = registrations.id
+          ORDER BY submitted_at DESC, allocations.id DESC
+          LIMIT 1
+        ) AS latest ON TRUE
+        WHERE registrations.id = ${id}
+      `;
+    });
 
     if (!registration) {
       return c.json({ error: "Registration not found" }, 404);

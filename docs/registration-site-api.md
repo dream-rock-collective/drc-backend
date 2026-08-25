@@ -60,11 +60,13 @@ Request body:
 {
   "name": "Jordan Alvarez",
   "email": "jordan@example.com",
-  "address": "123 Main St"
+  "address": "123 Main St",
+  "birthday": "April 12"
 }
 ```
 
-All three fields are required. `name` and `address` must contain 1–200 and
+`name`, `email`, and `address` are required. `birthday` is optional raw text.
+`name` and `address` must contain 1–200 and
 1–500 characters respectively; `email` must be a valid email address and may
 contain up to 320 characters. Leading and trailing whitespace is removed. The
 email is stored in lowercase.
@@ -79,6 +81,7 @@ const response = await fetch(`${API_BASE_URL}/register`, {
     name,
     email,
     address,
+    birthday,
   }),
 });
 
@@ -155,4 +158,6 @@ Stripe Checkout URL:
 ```
 
 The registration is marked paid only after Stripe sends a signed
-`checkout.session.completed` event to `POST /webhooks/stripe`.
+`checkout.session.completed` event to `POST /webhooks/stripe`. Successful
+Checkout sessions return to `/allocate-payment/`; canceled sessions return to
+`/registered/`.
