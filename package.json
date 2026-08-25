@@ -9,6 +9,7 @@
     "build": "vite build",
     "migrations": "bun run scripts/run-migrations.ts",
     "seed-admin": "bun run scripts/seed-admin.ts",
+    "rebuild": "bash scripts/deploy.sh",
     "smoke-api": "bun run scripts/smoke-api.ts",
     "typecheck": "tsc --noEmit",
     "lint": "stylelint \"src/**/*.css\""
