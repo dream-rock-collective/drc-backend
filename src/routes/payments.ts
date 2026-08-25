@@ -7,7 +7,7 @@ export const paymentsRoute = new Hono();
 
 const planSchema = z.enum(["once", "monthly", "yearly"]);
 const checkoutSchema = z.object({
-  registrationId: z.coerce.number().int().positive(),
+  userId: z.coerce.number().int().positive(),
   plan: planSchema,
 });
 
@@ -60,28 +60,28 @@ paymentsRoute.post("/create-checkout-session", async (c) => {
     return c.json({ error: "Registration id and a valid plan are required" }, 400);
   }
 
-  const { registrationId, plan } = result.data;
-  console.info("[payments] checkout request validated", { registrationId, plan });
+  const { userId, plan } = result.data;
+  console.info("[payments] checkout request validated", { userId, plan });
 
   try {
     const [registration] = await database<{ email: string }[]>`
       SELECT email
       FROM registrations
-      WHERE id = ${registrationId}
+      WHERE id = ${userId}
     `;
 
     if (!registration) {
-      console.warn("[payments] checkout registration not found", { registrationId, plan });
+      console.warn("[payments] checkout user not found", { userId, plan });
       return c.json({ error: "Registration not found" }, 404);
     }
 
-    console.info("[payments] creating Stripe Checkout Session", { registrationId, plan });
+    console.info("[payments] creating Stripe Checkout Session", { userId, plan });
 
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
       mode: plan === "once" ? "payment" : "subscription",
       line_items: [{ price: getPriceId(plan), quantity: 1 }],
-      client_reference_id: String(registrationId),
+      client_reference_id: String(userId),
       metadata: { plan },
       customer_email: registration.email,
       ...(plan === "once" ? { customer_creation: "always" as const } : {}),
@@ -91,7 +91,7 @@ paymentsRoute.post("/create-checkout-session", async (c) => {
 
     if (!session.url) {
       console.error("[payments] Stripe returned a Checkout Session without a URL", {
-        registrationId,
+        userId,
         plan,
         sessionId: session.id,
       });
@@ -99,7 +99,7 @@ paymentsRoute.post("/create-checkout-session", async (c) => {
     }
 
     console.info("[payments] Stripe Checkout Session created", {
-      registrationId,
+      userId,
       plan,
       sessionId: session.id,
       mode: session.mode,
@@ -109,7 +109,7 @@ paymentsRoute.post("/create-checkout-session", async (c) => {
     return c.json({ url: session.url });
   } catch (error) {
     console.error("[payments] Could not create Stripe Checkout Session", {
-      registrationId,
+      userId,
       plan,
       error,
     });
@@ -158,7 +158,7 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
   }
 
   const session = event.data.object;
-  const registrationId = Number(session.client_reference_id);
+  const userId = Number(session.client_reference_id);
   const plan = session.metadata?.["plan"];
 
   console.info("[payments] checkout.session.completed received", {
@@ -174,7 +174,7 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
 
   const parsedPlan = planSchema.safeParse(plan);
 
-  if (!Number.isSafeInteger(registrationId) || registrationId < 1 || !parsedPlan.success) {
+  if (!Number.isSafeInteger(userId) || userId < 1 || !parsedPlan.success) {
     console.error("[payments] Stripe Checkout Session is missing valid registration metadata", {
       eventId: event.id,
       sessionId: session.id,
@@ -191,13 +191,13 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
     const [before] = await database<{ payment_status: "pending" | "paid" | "failed"; plan: Plan | null }[]>`
       SELECT payment_status, plan
       FROM registrations
-      WHERE id = ${registrationId}
+      WHERE id = ${userId}
     `;
 
     console.info("[payments] recording Stripe payment", {
       eventId: event.id,
       sessionId: session.id,
-      registrationId,
+      userId,
       previousPaymentStatus: before?.payment_status ?? null,
       previousPlan: before?.plan ?? null,
       nextPaymentStatus: "paid",
@@ -211,7 +211,7 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
         stripe_customer_id = ${customerId},
         stripe_subscription_id = ${subscriptionId},
         plan = ${parsedPlan.data}
-      WHERE id = ${registrationId}
+      WHERE id = ${userId}
       RETURNING id, payment_status, plan
     `;
 
@@ -219,13 +219,13 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
       console.error("[payments] Stripe payment update matched no registration", {
         eventId: event.id,
         sessionId: session.id,
-        registrationId,
+        userId,
       });
     } else {
       console.info("[payments] Stripe payment recorded", {
         eventId: event.id,
         sessionId: session.id,
-        registrationId: updated.id,
+        userId: updated.id,
         paymentStatus: updated.payment_status,
         plan: updated.plan,
       });
@@ -234,7 +234,7 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
     console.error("[payments] Could not record Stripe payment", {
       eventId: event.id,
       sessionId: session.id,
-      registrationId,
+      userId,
       error,
     });
     return c.json({ error: "Could not record Stripe payment" }, 500);

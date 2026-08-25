@@ -145,7 +145,7 @@ Request body:
 
 ```json
 {
-  "registrationId": 42,
+  "userId": 42,
   "plan": "monthly"
 }
 ```

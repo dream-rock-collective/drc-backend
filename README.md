@@ -70,7 +70,7 @@ curl -X POST http://localhost:6942/register \
 
 The public payment endpoints are:
 
-- `POST /create-checkout-session` with `{ "registrationId": 42, "plan": "once" | "monthly" | "yearly" }`; returns the hosted Stripe Checkout URL.
+- `POST /create-checkout-session` with `{ "userId": 42, "plan": "once" | "monthly" | "yearly" }`; returns the hosted Stripe Checkout URL.
 - `POST /submit-allocation` with `{ "userId": "42", "allocation": { "charityKey": 5 } }`; stores an allocation submission for a paid registration.
 - `POST /webhooks/stripe`; configure Stripe to send signed events here. The webhook records completed Checkout Sessions on the registration.
 
