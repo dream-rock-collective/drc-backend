@@ -33,12 +33,21 @@ const paymentIdentifier = (value: string | null) => (
   value ? <code className="payment-id" title={value}>{value}</code> : <span className="muted">—</span>
 );
 
+const allocationLabels: Record<string, string> = {
+  weAllWeGotSd: "We All We Got SD",
+  indigenousClimateAction: "Indigenous Climate Action",
+  otayMesaDetentionResistance: "Otay Mesa Detention Resistance",
+};
+
 const allocationView = (allocation: Record<string, number> | null) => {
   if (!allocation) return <span className="muted">—</span>;
   return (
     <div className="allocation-list">
       {Object.entries(allocation).map(([charity, amount]) => (
-        <div key={charity}><span>{charity}</span><strong>${amount}</strong></div>
+        <div className="allocation-item" key={charity}>
+          <span title={charity}>{allocationLabels[charity] ?? charity}</span>
+          <strong>${amount}</strong>
+        </div>
       ))}
     </div>
   );

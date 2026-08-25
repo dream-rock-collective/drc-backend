@@ -37,7 +37,7 @@ type RegistrationRow = {
   payment_status: "pending" | "paid" | "failed";
   created_at: Date;
   deleted_at: Date | null;
-  latest_allocation: Record<string, number> | null;
+  latest_allocation: Record<string, number> | string | null;
 };
 
 const toAdminRegistration = (registration: RegistrationRow) => ({
@@ -51,10 +51,27 @@ const toAdminRegistration = (registration: RegistrationRow) => ({
   stripe_subscription_id: registration.stripe_subscription_id,
   plan: registration.plan,
   payment_status: registration.payment_status,
-  latest_allocation: registration.latest_allocation,
+  latest_allocation: normalizeAllocation(registration.latest_allocation),
   created_at: registration.created_at,
   deleted: registration.deleted_at !== null,
 });
+
+const normalizeAllocation = (
+  value: RegistrationRow["latest_allocation"],
+): Record<string, number> | null => {
+  if (value === null) return null;
+  if (typeof value !== "string") return value;
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([, amount]) => typeof amount === "number"),
+    );
+  } catch {
+    return null;
+  }
+};
 
 const requireSession = (c: { get: (key: "user") => SessionVariables["user"] }) =>
   c.get("user") !== null;

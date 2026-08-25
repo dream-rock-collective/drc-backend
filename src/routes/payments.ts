@@ -44,20 +44,24 @@ const getRegistrationSiteOrigin = (): string => {
 };
 
 paymentsRoute.post("/create-checkout-session", async (c) => {
+  console.info("[payments] create-checkout-session request received");
   let body: unknown;
 
   try {
     body = await c.req.json();
   } catch {
+    console.warn("[payments] checkout request rejected: invalid JSON");
     return c.json({ error: "Request body must be valid JSON" }, 400);
   }
 
   const result = checkoutSchema.safeParse(body);
   if (!result.success) {
+    console.warn("[payments] checkout request rejected: invalid payload");
     return c.json({ error: "Registration id and a valid plan are required" }, 400);
   }
 
   const { registrationId, plan } = result.data;
+  console.info("[payments] checkout request validated", { registrationId, plan });
 
   try {
     const [registration] = await database<{ email: string }[]>`
@@ -67,8 +71,11 @@ paymentsRoute.post("/create-checkout-session", async (c) => {
     `;
 
     if (!registration) {
+      console.warn("[payments] checkout registration not found", { registrationId, plan });
       return c.json({ error: "Registration not found" }, 404);
     }
+
+    console.info("[payments] creating Stripe Checkout Session", { registrationId, plan });
 
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
@@ -83,13 +90,29 @@ paymentsRoute.post("/create-checkout-session", async (c) => {
     });
 
     if (!session.url) {
-      console.error("Stripe returned a Checkout Session without a URL");
+      console.error("[payments] Stripe returned a Checkout Session without a URL", {
+        registrationId,
+        plan,
+        sessionId: session.id,
+      });
       return c.json({ error: "Could not create checkout session" }, 502);
     }
 
+    console.info("[payments] Stripe Checkout Session created", {
+      registrationId,
+      plan,
+      sessionId: session.id,
+      mode: session.mode,
+      paymentStatus: session.payment_status,
+    });
+
     return c.json({ url: session.url });
   } catch (error) {
-    console.error("Could not create Stripe Checkout Session", error);
+    console.error("[payments] Could not create Stripe Checkout Session", {
+      registrationId,
+      plan,
+      error,
+    });
     return c.json({ error: "Could not create checkout session" }, 500);
   }
 });
@@ -98,7 +121,16 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
   const webhookSecret = process.env["STRIPE_WEBHOOK_SECRET"]?.trim();
   const signature = c.req.header("stripe-signature");
 
+  console.info("[payments] Stripe webhook request received", {
+    hasWebhookSecret: Boolean(webhookSecret),
+    hasSignature: Boolean(signature),
+  });
+
   if (!webhookSecret || !signature) {
+    console.warn("[payments] Stripe webhook rejected before verification", {
+      hasWebhookSecret: Boolean(webhookSecret),
+      hasSignature: Boolean(signature),
+    });
     return c.json({ error: "Invalid Stripe webhook" }, 400);
   }
 
@@ -107,12 +139,21 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
   try {
     const rawBody = await c.req.text();
     event = await getStripe().webhooks.constructEventAsync(rawBody, signature, webhookSecret);
+    console.info("[payments] Stripe webhook signature verified", {
+      eventId: event.id,
+      eventType: event.type,
+      livemode: event.livemode,
+    });
   } catch (error) {
-    console.error("Could not verify Stripe webhook", error);
+    console.error("[payments] Could not verify Stripe webhook", { error });
     return c.json({ error: "Invalid Stripe webhook" }, 400);
   }
 
   if (event.type !== "checkout.session.completed") {
+    console.info("[payments] Stripe webhook event ignored", {
+      eventId: event.id,
+      eventType: event.type,
+    });
     return c.json({ received: true });
   }
 
@@ -120,10 +161,26 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
   const registrationId = Number(session.client_reference_id);
   const plan = session.metadata?.["plan"];
 
+  console.info("[payments] checkout.session.completed received", {
+    eventId: event.id,
+    sessionId: session.id,
+    registrationReference: session.client_reference_id,
+    plan,
+    mode: session.mode,
+    paymentStatus: session.payment_status,
+    customerId: typeof session.customer === "string" ? session.customer : null,
+    subscriptionId: typeof session.subscription === "string" ? session.subscription : null,
+  });
+
   const parsedPlan = planSchema.safeParse(plan);
 
   if (!Number.isSafeInteger(registrationId) || registrationId < 1 || !parsedPlan.success) {
-    console.error("Stripe Checkout Session is missing valid registration metadata", session.id);
+    console.error("[payments] Stripe Checkout Session is missing valid registration metadata", {
+      eventId: event.id,
+      sessionId: session.id,
+      registrationReference: session.client_reference_id,
+      plan,
+    });
     return c.json({ received: true });
   }
 
@@ -131,7 +188,23 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
   const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
 
   try {
-    await database`
+    const [before] = await database<{ payment_status: "pending" | "paid" | "failed"; plan: Plan | null }[]>`
+      SELECT payment_status, plan
+      FROM registrations
+      WHERE id = ${registrationId}
+    `;
+
+    console.info("[payments] recording Stripe payment", {
+      eventId: event.id,
+      sessionId: session.id,
+      registrationId,
+      previousPaymentStatus: before?.payment_status ?? null,
+      previousPlan: before?.plan ?? null,
+      nextPaymentStatus: "paid",
+      nextPlan: parsedPlan.data,
+    });
+
+    const [updated] = await database<{ id: number; payment_status: "pending" | "paid" | "failed"; plan: Plan | null }[]>`
       UPDATE registrations
       SET
         payment_status = 'paid',
@@ -139,9 +212,31 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
         stripe_subscription_id = ${subscriptionId},
         plan = ${parsedPlan.data}
       WHERE id = ${registrationId}
+      RETURNING id, payment_status, plan
     `;
+
+    if (!updated) {
+      console.error("[payments] Stripe payment update matched no registration", {
+        eventId: event.id,
+        sessionId: session.id,
+        registrationId,
+      });
+    } else {
+      console.info("[payments] Stripe payment recorded", {
+        eventId: event.id,
+        sessionId: session.id,
+        registrationId: updated.id,
+        paymentStatus: updated.payment_status,
+        plan: updated.plan,
+      });
+    }
   } catch (error) {
-    console.error("Could not record Stripe payment", error);
+    console.error("[payments] Could not record Stripe payment", {
+      eventId: event.id,
+      sessionId: session.id,
+      registrationId,
+      error,
+    });
     return c.json({ error: "Could not record Stripe payment" }, 500);
   }
 
