@@ -22,6 +22,17 @@ const redirectToLogin = (): void => {
   window.dispatchEvent(new PopStateEvent("popstate"));
 };
 
+const planLabel = (plan: Registration["plan"]): string => {
+  if (plan === "once") return "One-time";
+  if (plan === "monthly") return "Monthly";
+  if (plan === "yearly") return "Yearly";
+  return "—";
+};
+
+const paymentIdentifier = (value: string | null) => (
+  value ? <code className="payment-id" title={value}>{value}</code> : <span className="muted">—</span>
+);
+
 export const App = () => {
   const [path, setPath] = useState(window.location.pathname);
 
@@ -163,7 +174,11 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
       {loading && registrations.length === 0 ? <p className="muted">Loading registrations…</p> : (
         <section className="table-card">
           <table>
-            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Address</th><th>Created</th><th>Actions</th></tr></thead>
+            <thead><tr>
+              <th>ID</th><th>Name</th><th>Email</th><th>Address</th><th>Created</th>
+              <th>Payment status</th><th>Plan</th><th>Payment ID</th><th>Customer ID</th>
+              <th>Subscription ID</th><th>Actions</th>
+            </tr></thead>
             <tbody>
               {visibleRegistrations.map((registration) => (
                 <RegistrationRow
@@ -218,7 +233,7 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
       }
     };
 
-    return <tr><td colSpan={6}><form className="inline-form" onSubmit={save}>
+    return <tr><td colSpan={11}><form className="inline-form" onSubmit={save}>
       <input aria-label="Name" value={name} onChange={(event) => setName(event.target.value)} required />
       <input aria-label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
       <input aria-label="Address" value={address} onChange={(event) => setAddress(event.target.value)} required />
@@ -233,6 +248,13 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
     <td>{registration.email}</td>
     <td>{registration.address}</td>
     <td>{new Date(registration.created_at).toLocaleString()}</td>
+    <td><span className={`payment-status payment-status-${registration.payment_status}`}>
+      {registration.payment_status}
+    </span></td>
+    <td>{planLabel(registration.plan)}</td>
+    <td>{paymentIdentifier(registration.stripe_payment_id)}</td>
+    <td>{paymentIdentifier(registration.stripe_customer_id)}</td>
+    <td>{paymentIdentifier(registration.stripe_subscription_id)}</td>
     <td className="row-actions"><button type="button" className="link-button" onClick={onEdit}>Edit</button><button type="button" className="link-button danger" onClick={onDelete}>Delete</button></td>
   </tr>;
 };
