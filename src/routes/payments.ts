@@ -168,6 +168,7 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
     plan,
     mode: session.mode,
     paymentStatus: session.payment_status,
+    paymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
     customerId: typeof session.customer === "string" ? session.customer : null,
     subscriptionId: typeof session.subscription === "string" ? session.subscription : null,
   });
@@ -186,6 +187,9 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
 
   const customerId = typeof session.customer === "string" ? session.customer : null;
   const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
+  const paymentIntentId = session.mode === "payment" && typeof session.payment_intent === "string"
+    ? session.payment_intent
+    : null;
 
   try {
     const [before] = await database<{ payment_status: "pending" | "paid" | "failed"; plan: Plan | null }[]>`
@@ -208,6 +212,7 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
       UPDATE registrations
       SET
         payment_status = 'paid',
+        stripe_payment_intent_id = ${paymentIntentId},
         stripe_customer_id = ${customerId},
         stripe_subscription_id = ${subscriptionId},
         plan = ${parsedPlan.data}

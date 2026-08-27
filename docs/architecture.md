@@ -72,7 +72,8 @@ Since migrations are starting fresh (see [Section 5](#5-migrations)), there's no
 | name               | text, not null | |
 | email              | text, not null | stored lowercased |
 | address            | text, not null | |
-| stripe_payment_id  | text, nullable | reserved — not wired up yet, shape TBD once Stripe is integrated |
+| notes              | text, nullable | admin-only plain-text note, maximum 5,000 characters |
+| stripe_payment_intent_id | text, nullable | Stripe PaymentIntent ID for one-time payments |
 | created_at         | timestamp, not null, default now() | |
 | deleted_at         | timestamp, nullable | powers soft delete |
 
@@ -156,7 +157,8 @@ Renamed from `POST /api/registrations`. Same behavior as today, plus the new **r
       "name": "Jordan Alvarez",
       "email": "jordan@example.com",
       "address": "123 Main St, Springfield",
-      "stripe_payment_id": null,
+      "notes": null,
+      "stripe_payment_intent_id": null,
       "created_at": "2026-08-12T18:03:00.000Z",
       "deleted": false
     },
@@ -165,7 +167,7 @@ Renamed from `POST /api/registrations`. Same behavior as today, plus the new **r
       "name": "Old Entry",
       "email": "old@example.com",
       "address": "456 Oak Ave",
-      "stripe_payment_id": null,
+      "stripe_payment_intent_id": null,
       "created_at": "2026-07-01T09:12:00.000Z",
       "deleted": true
     }
@@ -186,7 +188,7 @@ Renamed from `POST /api/registrations`. Same behavior as today, plus the new **r
 
 **Edit** (partial update — `data` only needs the fields being changed):
 ```json
-{ "type": "edit", "id": "42", "data": { "name": "new name" } }
+{ "type": "edit", "id": "42", "data": { "name": "new name", "notes": "Call about pickup" } }
 ```
 
 **Response — `200`:** both `delete` and `edit` return the resulting row, in the same shape as one entry in `/registrations` (a delete's response has `deleted: true`). Giving both branches the same response shape means the frontend handles the result one way regardless of which action was taken.
@@ -194,6 +196,8 @@ Renamed from `POST /api/registrations`. Same behavior as today, plus the new **r
 `404` if the id doesn't exist, `400` for an unrecognized `type`, a missing `id`, or (on `edit`) a `data` object that fails the same field-level validation as `/register` (e.g. an invalid email). `401` if unauthenticated.
 
 Deleting sets `deleted_at = now()`; it never removes the row or clears its other fields, so an accidental delete is always recoverable directly in Postgres.
+`notes` is an optional plain-text field, trimmed at the edges, preserving internal
+newlines, limited to 5,000 characters, and cleared by sending an empty value.
 
 ### 6.4 `GET /health`
 
@@ -234,7 +238,7 @@ On mount:
 
 ### Table
 
-Columns: ID, Name, Email, Address, Created. Soft-deleted rows (`deleted: true`) are filtered out of the rendered table entirely — the UI only ever shows active registrations. The underlying `/registrations` JSON and the `localStorage` cache still include deleted rows (that's what makes them a real backup mirror); filtering happens purely in the table's rendering, never by dropping data from what's fetched/cached.
+Columns: ID, Name, Email, Address, Notes, Created. Soft-deleted rows (`deleted: true`) are filtered out of the rendered table entirely — the UI only ever shows active registrations. The underlying `/registrations` JSON and the `localStorage` cache still include deleted rows (that's what makes them a real backup mirror); filtering happens purely in the table's rendering, never by dropping data from what's fetched/cached.
 
 ### Export button
 
@@ -244,7 +248,7 @@ Exports the **full** cached dataset — the same data held in `localStorage`, in
 
 Per-row controls:
 
-- **Edit** opens an inline form or modal (name/email/address), and on submit calls `POST /modify-registration` with `{ type: "edit", id, data }` — only the changed fields go in `data`.
+- **Edit** opens an inline form or modal (name/email/address/notes), and on submit calls `POST /modify-registration` with `{ type: "edit", id, data }` — only the changed fields go in `data`.
 - **Delete** is a confirm-then-submit action calling `POST /modify-registration` with `{ type: "delete", id }`.
 
 Either way, the response (the updated row) is used to patch both in-memory state and the `localStorage` cache directly, rather than re-fetching the whole list.
@@ -264,7 +268,7 @@ Hand-written CSS, no component library (no shadcn/ui or similar) — the visual 
 
 - The registration-site's own implementation — it's just a consumer of `/register` and `/health` from this system's point of view.
 - Actually rebuilding a Postgres database from the exported JSON — `/registrations` and the export button exist so the *data* survives, not so it can be one-click restored yet.
-- Stripe integration — `stripe_payment_id` is reserved but not populated or validated this phase.
+- Recurring payment history — `stripe_payment_intent_id` stores the PaymentIntent for one-time payments; recurring payments use Stripe's invoice/payment records.
 - Subscription/recurring billing.
 - Multi-admin account management, invites, or password reset flows.
 - Migration rollback/`down()` scripts.

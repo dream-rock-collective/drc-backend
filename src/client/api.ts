@@ -45,6 +45,7 @@ export const modifyRegistration = async (
         email?: string;
         address?: string;
         birthday?: string | null;
+        notes?: string | null;
         allocation?: Record<string, number>;
       } },
 ): Promise<Registration> => {

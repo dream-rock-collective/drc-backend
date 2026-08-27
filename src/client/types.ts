@@ -4,7 +4,8 @@ export type Registration = {
   email: string;
   address: string;
   birthday: string | null;
-  stripe_payment_id: string | null;
+  notes: string | null;
+  stripe_payment_intent_id: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   plan: "once" | "monthly" | "yearly" | null;

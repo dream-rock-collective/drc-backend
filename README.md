@@ -88,8 +88,10 @@ The React admin SPA is available at `http://localhost:6942/login`.
 
 Authenticated API endpoints:
 
-- `GET /registrations` returns active and soft-deleted records.
-- `POST /modify-registration` edits records or soft-deletes them.
+- `GET /registrations` returns active and soft-deleted records, including each
+  registration's nullable plain-text `notes` field.
+- `POST /modify-registration` edits records or soft-deletes them. Edit payloads
+  may include `notes` (up to 5,000 characters); blank notes clear the field.
 
 Migrations are forward-only and run explicitly with `bun run migrations`.
 Docker does not initialize the schema automatically.

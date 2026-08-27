@@ -47,13 +47,54 @@ const authHeaders = { Cookie: cookie! };
 
 const registrations = await fetch(`${baseURL}/registrations`, { headers: authHeaders });
 assert(registrations.status === 200, `authenticated registrations returned ${registrations.status}`);
+const registrationsBody = (await registrations.json()) as {
+  registrations: Array<{ id: number; notes: string | null }>;
+};
+assert(
+  registrationsBody.registrations.some((registration) => registration.id === id && registration.notes === null),
+  "new registration notes should default to null",
+);
 
 const edit = await fetch(`${baseURL}/modify-registration`, {
   method: "POST",
   headers: { ...jsonHeaders, ...authHeaders },
-  body: JSON.stringify({ type: "edit", id: String(id), data: { name: "Edited Smoke Test" } }),
+  body: JSON.stringify({
+    type: "edit",
+    id: String(id),
+    data: { name: "Edited Smoke Test", notes: "  First line\nSecond line  " },
+  }),
 });
 assert(edit.status === 200, `edit returned ${edit.status}`);
+const editBody = (await edit.json()) as { notes: string | null };
+assert(editBody.notes === "First line\nSecond line", "notes were not saved");
+
+const registrationsAfterEdit = await fetch(`${baseURL}/registrations`, { headers: authHeaders });
+assert(registrationsAfterEdit.status === 200, `registrations after note edit returned ${registrationsAfterEdit.status}`);
+const registrationsAfterEditBody = (await registrationsAfterEdit.json()) as {
+  registrations: Array<{ id: number; notes: string | null }>;
+};
+assert(
+  registrationsAfterEditBody.registrations.some(
+    (registration) => registration.id === id && registration.notes === "First line\nSecond line",
+  ),
+  "saved notes were not returned by the registrations endpoint",
+);
+
+const oversizedNotes = await fetch(`${baseURL}/modify-registration`, {
+  method: "POST",
+  headers: { ...jsonHeaders, ...authHeaders },
+  body: JSON.stringify({ type: "edit", id: String(id), data: { notes: "x".repeat(5001) } }),
+});
+assert(oversizedNotes.status === 400, "oversized notes should return 400");
+
+const clearNotes = await fetch(`${baseURL}/modify-registration`, {
+  method: "POST",
+  headers: { ...jsonHeaders, ...authHeaders },
+  body: JSON.stringify({ type: "edit", id: String(id), data: { notes: "   " } }),
+});
+assert(clearNotes.status === 200, `clearing notes returned ${clearNotes.status}`);
+const clearNotesBody = (await clearNotes.json()) as { notes: string | null };
+assert(clearNotesBody.notes === null, "cleared notes should be null");
 
 const deletion = await fetch(`${baseURL}/modify-registration`, {
   method: "POST",

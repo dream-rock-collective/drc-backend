@@ -33,6 +33,10 @@ const paymentIdentifier = (value: string | null) => (
   value ? <code className="payment-id" title={value}>{value}</code> : <span className="muted">—</span>
 );
 
+const notesView = (notes: string | null) => (
+  notes ? <span>{notes}</span> : <span className="muted">—</span>
+);
+
 const allocationView = (allocation: Record<string, number> | null) => {
   if (!allocation) return <span className="muted">—</span>;
   return (
@@ -190,8 +194,8 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
           <table>
             <thead><tr>
               <th>ID</th><th>Name</th><th>Email</th><th>Address</th><th>Birthday</th><th>Created</th>
-              <th>Payment status</th><th>Plan</th><th>Payment ID</th><th>Customer ID</th>
-              <th>Subscription ID</th><th>Allotments</th><th>Actions</th>
+              <th>Payment status</th><th>Plan</th><th>Payment intent ID</th><th>Customer ID</th>
+              <th>Subscription ID</th><th>Allotments</th><th>Notes</th><th>Actions</th>
             </tr></thead>
             <tbody>
               {visibleRegistrations.map((registration) => (
@@ -228,6 +232,7 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
   const [email, setEmail] = useState(registration.email);
   const [address, setAddress] = useState(registration.address);
   const [birthday, setBirthday] = useState(registration.birthday ?? "");
+  const [notes, setNotes] = useState(registration.notes ?? "");
   const [allocationText, setAllocationText] = useState(
     registration.latest_allocation ? JSON.stringify(registration.latest_allocation) : "",
   );
@@ -238,12 +243,13 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
       event.preventDefault();
       const data: {
         name?: string; email?: string; address?: string; birthday?: string | null;
-        allocation?: Record<string, number>;
+        notes?: string | null; allocation?: Record<string, number>;
       } = {};
       if (name !== registration.name) data.name = name;
       if (email !== registration.email) data.email = email;
       if (address !== registration.address) data.address = address;
       if (birthday !== (registration.birthday ?? "")) data.birthday = birthday || null;
+      if (notes !== (registration.notes ?? "")) data.notes = notes || null;
       if (allocationText !== (registration.latest_allocation ? JSON.stringify(registration.latest_allocation) : "")) {
         try {
           const parsed: unknown = JSON.parse(allocationText);
@@ -265,12 +271,13 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
       }
     };
 
-    return <tr><td colSpan={13}><form className="inline-form" onSubmit={save}>
+    return <tr><td colSpan={14}><form className="inline-form" onSubmit={save}>
       <input aria-label="Name" value={name} onChange={(event) => setName(event.target.value)} required />
       <input aria-label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
       <input aria-label="Address" value={address} onChange={(event) => setAddress(event.target.value)} required />
       <input aria-label="Birthday" value={birthday} onChange={(event) => setBirthday(event.target.value)} />
       <textarea aria-label="Allotments JSON" value={allocationText} onChange={(event) => setAllocationText(event.target.value)} placeholder="{ &quot;charityKey&quot;: 1 }" />
+      <textarea aria-label="Notes" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Add an internal note" maxLength={5000} />
       <button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
       <button type="button" className="secondary" onClick={onCancel}>Cancel</button>
     </form></td></tr>;
@@ -287,10 +294,11 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
       {registration.payment_status}
     </span></td>
     <td>{planLabel(registration.plan)}</td>
-    <td>{paymentIdentifier(registration.stripe_payment_id)}</td>
+    <td>{paymentIdentifier(registration.stripe_payment_intent_id)}</td>
     <td>{paymentIdentifier(registration.stripe_customer_id)}</td>
     <td>{paymentIdentifier(registration.stripe_subscription_id)}</td>
     <td className="allocation-cell">{allocationView(registration.latest_allocation)}</td>
+    <td className="notes-cell">{notesView(registration.notes)}</td>
     <td className="row-actions"><button type="button" className="link-button" onClick={onEdit}>Edit</button><button type="button" className="link-button danger" onClick={onDelete}>Delete</button></td>
   </tr>;
 };

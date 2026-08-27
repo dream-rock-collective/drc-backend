@@ -19,6 +19,7 @@ const registrationFields = {
 };
 
 const registrationSchema = z.object(registrationFields);
+const notesSchema = z.string().trim().max(5000).nullable().optional();
 const editSchema = z.object(registrationFields).partial().refine(
   (data) => Object.keys(data).length > 0,
   "At least one field is required",
@@ -29,7 +30,7 @@ type RegistrationRow = {
   name: string;
   email: string;
   address: string;
-  stripe_payment_id: string | null;
+  stripe_payment_intent_id: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   birthday: string | null;
@@ -37,6 +38,7 @@ type RegistrationRow = {
   payment_status: "pending" | "paid" | "failed";
   created_at: Date;
   deleted_at: Date | null;
+  notes: string | null;
   latest_allocation: Record<string, number> | string | null;
 };
 
@@ -46,7 +48,8 @@ const toAdminRegistration = (registration: RegistrationRow) => ({
   email: registration.email,
   address: registration.address,
   birthday: registration.birthday,
-  stripe_payment_id: registration.stripe_payment_id,
+  notes: registration.notes,
+  stripe_payment_intent_id: registration.stripe_payment_intent_id,
   stripe_customer_id: registration.stripe_customer_id,
   stripe_subscription_id: registration.stripe_subscription_id,
   plan: registration.plan,
@@ -128,8 +131,8 @@ registrationsRoute.get("/registrations", async (c) => {
 
   try {
     const registrations = await database<RegistrationRow[]>`
-      SELECT id, name, email, address, stripe_payment_id, stripe_customer_id,
-        stripe_subscription_id, birthday, plan, payment_status, created_at, deleted_at,
+      SELECT id, name, email, address, stripe_payment_intent_id, stripe_customer_id,
+        stripe_subscription_id, birthday, notes, plan, payment_status, created_at, deleted_at,
         latest.allocation AS latest_allocation
       FROM registrations
       LEFT JOIN LATERAL (
@@ -154,7 +157,7 @@ const modificationSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("edit"),
     id: z.string().trim().min(1),
-    data: editSchema.extend({ allocation: allocationSchema.optional() }),
+    data: editSchema.extend({ allocation: allocationSchema.optional(), notes: notesSchema }),
   }),
 ]);
 
@@ -211,15 +214,16 @@ registrationsRoute.post("/modify-registration", async (c) => {
             name = COALESCE(${data.name ?? null}, name),
             email = COALESCE(${data.email?.toLowerCase() ?? null}, email),
             address = COALESCE(${data.address ?? null}, address),
-            birthday = CASE WHEN ${data.birthday !== undefined} THEN ${data.birthday ?? null} ELSE birthday END
+            birthday = CASE WHEN ${data.birthday !== undefined} THEN ${data.birthday ?? null} ELSE birthday END,
+            notes = CASE WHEN ${data.notes !== undefined} THEN ${data.notes || null} ELSE notes END
           WHERE id = ${id}
         `;
       }
 
       return sql<RegistrationRow[]>`
-        SELECT registrations.id, name, email, address, stripe_payment_id,
+        SELECT registrations.id, name, email, address, stripe_payment_intent_id,
           stripe_customer_id, stripe_subscription_id, birthday, plan,
-          payment_status, created_at, deleted_at,
+          payment_status, created_at, deleted_at, notes,
           latest.allocation AS latest_allocation
         FROM registrations
         LEFT JOIN LATERAL (
