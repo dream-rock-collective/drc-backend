@@ -51,6 +51,10 @@ const allocationView = (allocation: Record<string, number> | null) => {
   );
 };
 
+const detailValue = (value: React.ReactNode) => (
+  <dd>{value || <span className="muted">—</span>}</dd>
+);
+
 export const App = () => {
   const [path, setPath] = useState(window.location.pathname);
 
@@ -190,7 +194,7 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
       </header>
       {error && <p className="form-error" role="alert">{error}</p>}
       {loading && registrations.length === 0 ? <p className="muted">Loading registrations…</p> : (
-        <section className="table-card">
+        <section className="table-card desktop-registrations">
           <table>
             <thead><tr>
               <th>ID</th><th>Name</th><th>Email</th><th>Address</th><th>Birthday</th><th>Created</th>
@@ -215,6 +219,21 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
           {visibleRegistrations.length === 0 && <p className="empty-state">No active registrations.</p>}
         </section>
       )}
+      {(!loading || registrations.length > 0) && <section className="mobile-registrations" aria-label="Registrations">
+        {visibleRegistrations.map((registration) => (
+          <RegistrationCard
+            key={registration.id}
+            registration={registration}
+            editing={editingId === registration.id}
+            onEdit={() => setEditingId(registration.id)}
+            onCancel={() => setEditingId(null)}
+            onSaved={(updated) => { patchRegistration(updated); setEditingId(null); }}
+            onDelete={() => void deleteRegistration(registration)}
+            onError={setError}
+          />
+        ))}
+        {visibleRegistrations.length === 0 && <p className="empty-state">No active registrations.</p>}
+      </section>}
     </main>
   );
 };
@@ -228,6 +247,39 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
   onDelete: () => void;
   onError: (message: string) => void;
 }) => {
+  return <tr>
+    {editing ? <td colSpan={14}><RegistrationEditor
+      registration={registration}
+      onCancel={onCancel}
+      onSaved={onSaved}
+      onError={onError}
+    /></td> : <>
+      <td>{registration.id}</td>
+      <td>{registration.name}</td>
+      <td>{registration.email}</td>
+      <td>{registration.address}</td>
+      <td>{registration.birthday || <span className="muted">—</span>}</td>
+      <td>{new Date(registration.created_at).toLocaleString()}</td>
+      <td><span className={`payment-status payment-status-${registration.payment_status}`}>
+        {registration.payment_status}
+      </span></td>
+      <td>{planLabel(registration.plan)}</td>
+      <td>{paymentIdentifier(registration.stripe_payment_intent_id)}</td>
+      <td>{paymentIdentifier(registration.stripe_customer_id)}</td>
+      <td>{paymentIdentifier(registration.stripe_subscription_id)}</td>
+      <td className="allocation-cell">{allocationView(registration.latest_allocation)}</td>
+      <td className="notes-cell">{notesView(registration.notes)}</td>
+      <td className="row-actions"><button type="button" className="link-button" onClick={onEdit}>Edit</button><button type="button" className="link-button danger" onClick={onDelete}>Delete</button></td>
+    </>}
+  </tr>;
+};
+
+const RegistrationEditor = ({ registration, onCancel, onSaved, onError }: {
+  registration: Registration;
+  onCancel: () => void;
+  onSaved: (registration: Registration) => void;
+  onError: (message: string) => void;
+}) => {
   const [name, setName] = useState(registration.name);
   const [email, setEmail] = useState(registration.email);
   const [address, setAddress] = useState(registration.address);
@@ -238,67 +290,108 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
   );
   const [busy, setBusy] = useState(false);
 
-  if (editing) {
-    const save = async (event: React.FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const data: {
-        name?: string; email?: string; address?: string; birthday?: string | null;
-        notes?: string | null; allocation?: Record<string, number>;
-      } = {};
-      if (name !== registration.name) data.name = name;
-      if (email !== registration.email) data.email = email;
-      if (address !== registration.address) data.address = address;
-      if (birthday !== (registration.birthday ?? "")) data.birthday = birthday || null;
-      if (notes !== (registration.notes ?? "")) data.notes = notes || null;
-      if (allocationText !== (registration.latest_allocation ? JSON.stringify(registration.latest_allocation) : "")) {
-        try {
-          const parsed: unknown = JSON.parse(allocationText);
-          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
-          data.allocation = parsed as Record<string, number>;
-        } catch {
-          onError("Allotments must be a valid JSON object");
-          return;
-        }
-      }
-      if (Object.keys(data).length === 0) return onCancel();
-      setBusy(true);
+  useEffect(() => {
+    setName(registration.name);
+    setEmail(registration.email);
+    setAddress(registration.address);
+    setBirthday(registration.birthday ?? "");
+    setNotes(registration.notes ?? "");
+    setAllocationText(registration.latest_allocation ? JSON.stringify(registration.latest_allocation) : "");
+  }, [registration]);
+
+  const save = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data: {
+      name?: string; email?: string; address?: string; birthday?: string | null;
+      notes?: string | null; allocation?: Record<string, number>;
+    } = {};
+    if (name !== registration.name) data.name = name;
+    if (email !== registration.email) data.email = email;
+    if (address !== registration.address) data.address = address;
+    if (birthday !== (registration.birthday ?? "")) data.birthday = birthday || null;
+    if (notes !== (registration.notes ?? "")) data.notes = notes || null;
+    if (allocationText !== (registration.latest_allocation ? JSON.stringify(registration.latest_allocation) : "")) {
       try {
-        onSaved(await modifyRegistration({ type: "edit", id: registration.id, data }));
-      } catch (reason) {
-        onError(reason instanceof Error ? reason.message : "Could not edit registration");
-      } finally {
-        setBusy(false);
+        const parsed: unknown = JSON.parse(allocationText);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+        data.allocation = parsed as Record<string, number>;
+      } catch {
+        onError("Allotments must be a valid JSON object");
+        return;
       }
-    };
+    }
+    if (Object.keys(data).length === 0) return onCancel();
+    setBusy(true);
+    try {
+      onSaved(await modifyRegistration({ type: "edit", id: registration.id, data }));
+    } catch (reason) {
+      onError(reason instanceof Error ? reason.message : "Could not edit registration");
+    } finally {
+      setBusy(false);
+    }
+  };
 
-    return <tr><td colSpan={14}><form className="inline-form" onSubmit={save}>
-      <input aria-label="Name" value={name} onChange={(event) => setName(event.target.value)} required />
-      <input aria-label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
-      <input aria-label="Address" value={address} onChange={(event) => setAddress(event.target.value)} required />
-      <input aria-label="Birthday" value={birthday} onChange={(event) => setBirthday(event.target.value)} />
-      <textarea aria-label="Allotments JSON" value={allocationText} onChange={(event) => setAllocationText(event.target.value)} placeholder="{ &quot;charityKey&quot;: 1 }" />
-      <textarea aria-label="Notes" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Add an internal note" maxLength={5000} />
-      <button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
-      <button type="button" className="secondary" onClick={onCancel}>Cancel</button>
-    </form></td></tr>;
-  }
+  return <form className="registration-editor" onSubmit={save}>
+    <div className="editor-fields">
+      <label>Name<input value={name} onChange={(event) => setName(event.target.value)} required /></label>
+      <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
+      <label>Address<input value={address} onChange={(event) => setAddress(event.target.value)} required /></label>
+      <label>Birthday<input value={birthday} onChange={(event) => setBirthday(event.target.value)} /></label>
+      <label className="editor-wide">Allotments JSON<textarea value={allocationText} onChange={(event) => setAllocationText(event.target.value)} placeholder="{ &quot;charityKey&quot;: 1 }" /></label>
+      <label className="editor-wide">Notes<textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Add an internal note" maxLength={5000} /></label>
+    </div>
+    <div className="editor-actions">
+      <button type="submit" disabled={busy}>{busy ? "Saving…" : "Save changes"}</button>
+      <button type="button" className="secondary" onClick={onCancel} disabled={busy}>Cancel</button>
+    </div>
+  </form>;
+};
 
-  return <tr>
-    <td>{registration.id}</td>
-    <td>{registration.name}</td>
-    <td>{registration.email}</td>
-    <td>{registration.address}</td>
-    <td>{registration.birthday || <span className="muted">—</span>}</td>
-    <td>{new Date(registration.created_at).toLocaleString()}</td>
-    <td><span className={`payment-status payment-status-${registration.payment_status}`}>
-      {registration.payment_status}
-    </span></td>
-    <td>{planLabel(registration.plan)}</td>
-    <td>{paymentIdentifier(registration.stripe_payment_intent_id)}</td>
-    <td>{paymentIdentifier(registration.stripe_customer_id)}</td>
-    <td>{paymentIdentifier(registration.stripe_subscription_id)}</td>
-    <td className="allocation-cell">{allocationView(registration.latest_allocation)}</td>
-    <td className="notes-cell">{notesView(registration.notes)}</td>
-    <td className="row-actions"><button type="button" className="link-button" onClick={onEdit}>Edit</button><button type="button" className="link-button danger" onClick={onDelete}>Delete</button></td>
-  </tr>;
+const RegistrationCard = ({ registration, editing, onEdit, onCancel, onSaved, onDelete, onError }: {
+  registration: Registration;
+  editing: boolean;
+  onEdit: () => void;
+  onCancel: () => void;
+  onSaved: (registration: Registration) => void;
+  onDelete: () => void;
+  onError: (message: string) => void;
+}) => {
+  return <article className="registration-card">
+    <div className="registration-card-header">
+      <div>
+        <p className="card-id">Registration #{registration.id}</p>
+        <h2>{registration.name}</h2>
+        <a href={`mailto:${registration.email}`}>{registration.email}</a>
+      </div>
+      <span className={`payment-status payment-status-${registration.payment_status}`}>
+        {registration.payment_status}
+      </span>
+    </div>
+    <div className="card-summary">
+      <span><strong>Plan</strong>{planLabel(registration.plan)}</span>
+      <span><strong>Birthday</strong>{registration.birthday || <span className="muted">—</span>}</span>
+    </div>
+    <div className="row-actions card-actions">
+      <button type="button" className="link-button" onClick={onEdit}>Edit</button>
+      <button type="button" className="link-button danger" onClick={onDelete}>Delete</button>
+    </div>
+    <details className="registration-details">
+      <summary>View registration details</summary>
+      <dl>
+        <dt>Address</dt>{detailValue(registration.address)}
+        <dt>Created</dt>{detailValue(new Date(registration.created_at).toLocaleString())}
+        <dt>Payment intent ID</dt>{detailValue(paymentIdentifier(registration.stripe_payment_intent_id))}
+        <dt>Customer ID</dt>{detailValue(paymentIdentifier(registration.stripe_customer_id))}
+        <dt>Subscription ID</dt>{detailValue(paymentIdentifier(registration.stripe_subscription_id))}
+        <dt>Allotments</dt>{detailValue(allocationView(registration.latest_allocation))}
+        <dt>Notes</dt>{detailValue(notesView(registration.notes))}
+      </dl>
+    </details>
+    {editing && <div className="mobile-editor"><RegistrationEditor
+      registration={registration}
+      onCancel={onCancel}
+      onSaved={onSaved}
+      onError={onError}
+    /></div>}
+  </article>;
 };
