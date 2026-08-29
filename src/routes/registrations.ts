@@ -5,6 +5,7 @@ import {
   insertAllocation,
 } from "../allocation";
 import { database } from "../db";
+import { logger } from "../logger";
 import type { SessionVariables } from "../middleware/session";
 
 export const registrationsRoute = new Hono<{
@@ -80,6 +81,11 @@ const requireSession = (c: { get: (key: "user") => SessionVariables["user"] }) =
   c.get("user") !== null;
 
 registrationsRoute.post("/register", async (c) => {
+  logger.info("[registrations] public registration request received", {
+    method: c.req.method,
+    url: c.req.url,
+    contentType: c.req.header("content-type") ?? null,
+  });
   let body: unknown;
 
   try {
@@ -91,6 +97,10 @@ registrationsRoute.post("/register", async (c) => {
   const result = registrationSchema.safeParse(body);
 
   if (!result.success) {
+    logger.warn("[registrations] public registration rejected: schema validation failed", {
+      issueCount: result.error.issues.length,
+      fields: result.error.issues.map((issue) => issue.path.join(".")),
+    });
     return c.json(
       {
         error: "Please provide a name, address, and valid email address",
@@ -102,6 +112,12 @@ registrationsRoute.post("/register", async (c) => {
 
   const { name, address, birthday } = result.data;
   const email = result.data.email.toLowerCase();
+  logger.info("[registrations] public registration validated", {
+    email,
+    nameLength: name.length,
+    addressLength: address.length,
+    hasBirthday: birthday !== null && birthday !== undefined,
+  });
 
   try {
     const [registration] = await database<{
@@ -117,15 +133,21 @@ registrationsRoute.post("/register", async (c) => {
       RETURNING id, name, email, address, birthday, created_at
     `;
 
+    logger.info("[registrations] public registration saved", {
+      registrationId: registration?.id ?? null,
+      createdAt: registration?.created_at ?? null,
+    });
     return c.json({ registration }, 201);
   } catch (error) {
-    console.error("Could not save registration", error);
+    logger.error("Could not save registration", error);
     return c.json({ error: "Could not save registration" }, 500);
   }
 });
 
 registrationsRoute.get("/registrations", async (c) => {
+  logger.info("[registrations] admin registration list requested");
   if (!requireSession(c)) {
+    logger.warn("[registrations] admin registration list rejected: authentication required");
     return c.json({ error: "Authentication required" }, 401);
   }
 
@@ -145,9 +167,13 @@ registrationsRoute.get("/registrations", async (c) => {
       ORDER BY created_at DESC, id DESC
     `;
 
+    logger.info("[registrations] admin registration list loaded", {
+      count: registrations.length,
+      deletedCount: registrations.filter((registration) => registration.deleted_at !== null).length,
+    });
     return c.json({ registrations: registrations.map(toAdminRegistration) });
   } catch (error) {
-    console.error("Could not load registrations", error);
+    logger.error("Could not load registrations", error);
     return c.json({ error: "Could not load registrations" }, 500);
   }
 });
@@ -162,7 +188,9 @@ const modificationSchema = z.discriminatedUnion("type", [
 ]);
 
 registrationsRoute.post("/modify-registration", async (c) => {
+  logger.info("[registrations] admin modification request received");
   if (!requireSession(c)) {
+    logger.warn("[registrations] admin modification rejected: authentication required");
     return c.json({ error: "Authentication required" }, 401);
   }
 
@@ -177,6 +205,10 @@ registrationsRoute.post("/modify-registration", async (c) => {
   const result = modificationSchema.safeParse(body);
 
   if (!result.success) {
+    logger.warn("[registrations] admin modification rejected: schema validation failed", {
+      issueCount: result.error.issues.length,
+      fields: result.error.issues.map((issue) => issue.path.join(".")),
+    });
     return c.json(
       {
         error: "Invalid registration modification",
@@ -188,12 +220,22 @@ registrationsRoute.post("/modify-registration", async (c) => {
 
   const id = Number(result.data.id);
   if (!Number.isSafeInteger(id) || id < 1) {
+    logger.warn("[registrations] admin modification rejected: invalid registration id", {
+      suppliedId: result.data.id,
+    });
     return c.json({ error: "Registration id must be a positive integer" }, 400);
   }
+
+  logger.info("[registrations] admin modification validated", {
+    registrationId: id,
+    type: result.data.type,
+    fields: result.data.type === "edit" ? Object.keys(result.data.data) : [],
+  });
 
   try {
     const [registration] = await database.begin(async (sql) => {
       if (result.data.type === "delete") {
+        logger.info("[registrations] soft deleting registration", { registrationId: id });
         await sql`
           UPDATE registrations
           SET deleted_at = NOW()
@@ -202,6 +244,11 @@ registrationsRoute.post("/modify-registration", async (c) => {
       } else {
         const { data } = result.data;
         if (data.allocation) {
+          logger.info("[registrations] admin modification includes allocation", {
+            registrationId: id,
+            organizations: Object.keys(data.allocation),
+            total: Object.values(data.allocation).reduce((sum, amount) => sum + amount, 0),
+          });
           const [current] = await sql<{ id: number }[]>`
             SELECT id FROM registrations WHERE id = ${id}
           `;
@@ -238,12 +285,17 @@ registrationsRoute.post("/modify-registration", async (c) => {
     });
 
     if (!registration) {
+      logger.warn("[registrations] admin modification found no registration", { registrationId: id });
       return c.json({ error: "Registration not found" }, 404);
     }
 
+    logger.info("[registrations] admin modification saved", {
+      registrationId: registration.id,
+      type: result.data.type,
+    });
     return c.json(toAdminRegistration(registration));
   } catch (error) {
-    console.error("Could not modify registration", error);
+    logger.error("Could not modify registration", error);
     return c.json({ error: "Could not modify registration" }, 500);
   }
 });

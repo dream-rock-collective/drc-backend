@@ -2,6 +2,7 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { Sql, TransactionSql } from "postgres";
 import { database } from "../src/db";
+import { logger } from "../src/logger";
 
 type Migration = {
   up: (sql: Sql | TransactionSql) => Promise<void>;
@@ -29,7 +30,7 @@ const appliedNames = new Set(appliedRows.map(({ name }) => name));
 
 for (const name of migrationNames) {
   if (appliedNames.has(name)) {
-    console.log(`Skipping applied migration ${name}`);
+    logger.info(`Skipping applied migration ${name}`);
     continue;
   }
 
@@ -47,7 +48,7 @@ for (const name of migrationNames) {
     `;
   });
 
-  console.log(`Applied migration ${name}`);
+  logger.info(`Applied migration ${name}`);
 }
 
 await database.end();

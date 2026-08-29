@@ -1,5 +1,6 @@
 import type { Sql, TransactionSql } from "postgres";
 import { z } from "zod";
+import { logger } from "./logger";
 
 export const allocationSchema = z.record(
   z.string().min(1),
@@ -13,6 +14,11 @@ export const insertAllocation = async (
   registrationId: number,
   allocation: Allocation,
 ): Promise<number> => {
+  logger.info("[allocation] insert started", {
+    registrationId,
+    organizations: Object.keys(allocation),
+    total: Object.values(allocation).reduce((sum, amount) => sum + amount, 0),
+  });
   const [row] = await sql<{ id: number }[]>`
     INSERT INTO allocations (registration_id, allocation)
     VALUES (${registrationId}, ${JSON.stringify(allocation)}::jsonb)
@@ -20,5 +26,9 @@ export const insertAllocation = async (
   `;
 
   if (!row) throw new Error("Allocation insert did not return an id");
+  logger.info("[allocation] insert completed", {
+    registrationId,
+    allocationId: row.id,
+  });
   return row.id;
 };

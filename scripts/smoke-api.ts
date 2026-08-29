@@ -1,3 +1,5 @@
+import { logger } from "../src/logger";
+
 const baseURL = process.env["SMOKE_BASE_URL"] ?? "http://localhost:6942";
 const email = process.env["ADMIN_EMAIL"];
 const password = process.env["ADMIN_PASSWORD"];
@@ -115,4 +117,4 @@ const logout = await fetch(`${baseURL}/auth/sign-out`, {
 });
 assert(logout.status === 200, `logout returned ${logout.status}`);
 
-console.log("API smoke test passed");
+logger.info("API smoke test passed");

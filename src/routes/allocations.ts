@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../db";
+import { logger } from "../logger";
 import {
   allocationSchema,
   insertAllocation,
@@ -30,23 +31,23 @@ const requireSession = (c: { get: (key: "user") => SessionVariables["user"] }) =
   c.get("user") !== null;
 
 allocationsRoute.post("/submit-allocation", async (c) => {
-  console.info("[allocations] submit-allocation request received");
+  logger.info("[allocations] submit-allocation request received");
   let body: unknown;
   try {
     body = await c.req.json();
   } catch {
-    console.warn("[allocations] allocation request rejected: invalid JSON");
+    logger.warn("[allocations] allocation request rejected: invalid JSON");
     return c.json({ error: "Request body must be valid JSON" }, 400);
   }
 
   const result = submitSchema.safeParse(body);
   if (!result.success) {
-    console.warn("[allocations] allocation request rejected: invalid payload");
+    logger.warn("[allocations] allocation request rejected: invalid payload");
     return c.json({ error: "A user id and valid allocation are required" }, 400);
   }
 
   const { userId, allocation } = result.data;
-  console.info("[allocations] allocation request validated", {
+  logger.info("[allocations] allocation request validated", {
     registrationId: userId,
     organizations: Object.keys(allocation),
     total: Object.values(allocation).reduce((sum, amount) => sum + amount, 0),
@@ -63,7 +64,7 @@ allocationsRoute.post("/submit-allocation", async (c) => {
       WHERE id = ${userId} AND deleted_at IS NULL
     `;
 
-    console.info("[allocations] registration payment state loaded", {
+    logger.info("[allocations] registration payment state loaded", {
       registrationId: userId,
       found: Boolean(registration),
       paymentStatus: registration?.payment_status ?? null,
@@ -73,11 +74,11 @@ allocationsRoute.post("/submit-allocation", async (c) => {
     });
 
     if (!registration) {
-      console.warn("[allocations] allocation rejected: registration not found", { registrationId: userId });
+      logger.warn("[allocations] allocation rejected: registration not found", { registrationId: userId });
       return c.json({ error: "Registration not found" }, 404);
     }
     if (registration.payment_status !== "paid") {
-      console.warn("[allocations] allocation rejected: payment is not complete", {
+      logger.warn("[allocations] allocation rejected: payment is not complete", {
         registrationId: userId,
         paymentStatus: registration.payment_status,
         plan: registration.plan,
@@ -86,19 +87,28 @@ allocationsRoute.post("/submit-allocation", async (c) => {
     }
 
     const allocationId = await insertAllocation(database, userId, allocation);
-    console.info("[allocations] allocation saved", { registrationId: userId, allocationId });
+    logger.info("[allocations] allocation saved", { registrationId: userId, allocationId });
     return c.json({ allocationId }, 201);
   } catch (error) {
-    console.error("[allocations] Could not save allocation", { registrationId: userId, error });
+    logger.error("[allocations] Could not save allocation", { registrationId: userId, error });
     return c.json({ error: "Could not save allocation" }, 500);
   }
 });
 
 allocationsRoute.get("/registrations/:id/allocations", async (c) => {
-  if (!requireSession(c)) return c.json({ error: "Authentication required" }, 401);
+  logger.info("[allocations] allocation history requested", {
+    registrationId: c.req.param("id"),
+  });
+  if (!requireSession(c)) {
+    logger.warn("[allocations] allocation history rejected: authentication required");
+    return c.json({ error: "Authentication required" }, 401);
+  }
 
   const id = Number(c.req.param("id"));
   if (!Number.isSafeInteger(id) || id < 1) {
+    logger.warn("[allocations] allocation history rejected: invalid registration id", {
+      suppliedId: c.req.param("id"),
+    });
     return c.json({ error: "Registration id must be a positive integer" }, 400);
   }
 
@@ -114,9 +124,16 @@ allocationsRoute.get("/registrations/:id/allocations", async (c) => {
       ORDER BY submitted_at DESC, id DESC
     `;
 
+    logger.info("[allocations] allocation history loaded", {
+      registrationId: id,
+      count: rows.length,
+    });
     return c.json({ allocations: rows.map(toAllocation) });
   } catch (error) {
-    console.error("Could not load allocation history", error);
+    logger.error("[allocations] Could not load allocation history", {
+      registrationId: id,
+      error,
+    });
     return c.json({ error: "Could not load allocation history" }, 500);
   }
 });

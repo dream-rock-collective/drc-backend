@@ -1,5 +1,6 @@
 import { createAuth, closeAuthDatabase } from "../src/auth";
 import { database } from "../src/db";
+import { logger } from "../src/logger";
 
 const email = process.env["ADMIN_EMAIL"];
 const password = process.env["ADMIN_PASSWORD"];
@@ -24,9 +25,9 @@ try {
       },
     });
 
-    console.log(`Seeded admin account ${email.toLowerCase()}`);
+    logger.info(`Seeded admin account ${email.toLowerCase()}`);
   } else {
-    console.log(`Admin account ${email.toLowerCase()} already exists`);
+    logger.info(`Admin account ${email.toLowerCase()} already exists`);
   }
 } finally {
   await closeAuthDatabase();

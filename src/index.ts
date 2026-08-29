@@ -7,9 +7,11 @@ import { healthRoute } from "./routes/health";
 import { registrationsRoute } from "./routes/registrations";
 import { paymentsRoute } from "./routes/payments";
 import { allocationsRoute } from "./routes/allocations";
+import { logger } from "./logger";
 
 const app = new Hono<{ Variables: SessionVariables }>();
 const configuredRegistrationSiteOrigin = process.env["REGISTRATION_SITE_ORIGIN"]?.trim();
+
 const publicCors = cors({
   origin: configuredRegistrationSiteOrigin || "http://localhost:5173",
 });
@@ -61,4 +63,4 @@ export default {
   fetch: app.fetch,
 };
 
-console.log(`Server running on port ${port}`);
+logger.info(`Server running on port ${port}`);
