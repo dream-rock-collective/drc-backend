@@ -257,7 +257,7 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
       <td>{registration.id}</td>
       <td>{registration.name}</td>
       <td>{registration.email}</td>
-      <td>{registration.address}</td>
+      <td>{registration.address || <span className="muted">—</span>}</td>
       <td>{registration.birthday || <span className="muted">—</span>}</td>
       <td>{new Date(registration.created_at).toLocaleString()}</td>
       <td><span className={`payment-status payment-status-${registration.payment_status}`}>
@@ -282,7 +282,7 @@ const RegistrationEditor = ({ registration, onCancel, onSaved, onError }: {
 }) => {
   const [name, setName] = useState(registration.name);
   const [email, setEmail] = useState(registration.email);
-  const [address, setAddress] = useState(registration.address);
+  const [address, setAddress] = useState(registration.address ?? "");
   const [birthday, setBirthday] = useState(registration.birthday ?? "");
   const [notes, setNotes] = useState(registration.notes ?? "");
   const [allocationText, setAllocationText] = useState(
@@ -293,7 +293,7 @@ const RegistrationEditor = ({ registration, onCancel, onSaved, onError }: {
   useEffect(() => {
     setName(registration.name);
     setEmail(registration.email);
-    setAddress(registration.address);
+    setAddress(registration.address ?? "");
     setBirthday(registration.birthday ?? "");
     setNotes(registration.notes ?? "");
     setAllocationText(registration.latest_allocation ? JSON.stringify(registration.latest_allocation) : "");
@@ -335,7 +335,7 @@ const RegistrationEditor = ({ registration, onCancel, onSaved, onError }: {
     <div className="editor-fields">
       <label>Name<input value={name} onChange={(event) => setName(event.target.value)} required /></label>
       <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-      <label>Address<input value={address} onChange={(event) => setAddress(event.target.value)} required /></label>
+      <label>Address<input value={address} onChange={(event) => setAddress(event.target.value)} /></label>
       <label>Birthday<input value={birthday} onChange={(event) => setBirthday(event.target.value)} /></label>
       <label className="editor-wide">Allotments JSON<textarea value={allocationText} onChange={(event) => setAllocationText(event.target.value)} placeholder="{ &quot;charityKey&quot;: 1 }" /></label>
       <label className="editor-wide">Notes<textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Add an internal note" maxLength={5000} /></label>

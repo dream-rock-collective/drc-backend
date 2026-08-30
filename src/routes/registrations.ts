@@ -15,7 +15,7 @@ export const registrationsRoute = new Hono<{
 const registrationFields = {
   name: z.string().trim().min(1, "Name is required").max(200),
   email: z.string().trim().email("A valid email is required").max(320),
-  address: z.string().trim().min(1, "Address is required").max(500),
+  address: z.string().trim().max(500).nullable().optional(),
   birthday: z.string().max(100).nullable().optional(),
 };
 
@@ -30,7 +30,7 @@ type RegistrationRow = {
   id: number;
   name: string;
   email: string;
-  address: string;
+  address: string | null;
   stripe_payment_intent_id: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
@@ -103,7 +103,7 @@ registrationsRoute.post("/register", async (c) => {
     });
     return c.json(
       {
-        error: "Please provide a name, address, and valid email address",
+        error: "Please provide a name and valid email address",
         fields: result.error.flatten().fieldErrors,
       },
       400,
@@ -115,7 +115,7 @@ registrationsRoute.post("/register", async (c) => {
   logger.info("[registrations] public registration validated", {
     email,
     nameLength: name.length,
-    addressLength: address.length,
+    addressLength: address?.length ?? 0,
     hasBirthday: birthday !== null && birthday !== undefined,
   });
 
@@ -124,12 +124,12 @@ registrationsRoute.post("/register", async (c) => {
       id: number;
       name: string;
       email: string;
-      address: string;
+      address: string | null;
       birthday: string | null;
       created_at: Date;
     }[]>`
       INSERT INTO registrations (name, email, address, birthday)
-      VALUES (${name}, ${email}, ${address}, ${birthday ?? null})
+      VALUES (${name}, ${email}, ${address || null}, ${birthday ?? null})
       RETURNING id, name, email, address, birthday, created_at
     `;
 
@@ -260,7 +260,7 @@ registrationsRoute.post("/modify-registration", async (c) => {
           SET
             name = COALESCE(${data.name ?? null}, name),
             email = COALESCE(${data.email?.toLowerCase() ?? null}, email),
-            address = COALESCE(${data.address ?? null}, address),
+            address = CASE WHEN ${data.address !== undefined} THEN ${data.address || null} ELSE address END,
             birthday = CASE WHEN ${data.birthday !== undefined} THEN ${data.birthday ?? null} ELSE birthday END,
             notes = CASE WHEN ${data.notes !== undefined} THEN ${data.notes || null} ELSE notes END
           WHERE id = ${id}

@@ -65,11 +65,11 @@ Request body:
 }
 ```
 
-`name`, `email`, and `address` are required. `birthday` is optional raw text.
-`name` and `address` must contain 1–200 and
-1–500 characters respectively; `email` must be a valid email address and may
-contain up to 320 characters. Leading and trailing whitespace is removed. The
-email is stored in lowercase.
+`name` and `email` are required. `address` is optional and may be omitted or
+`null`; blank values are stored as `null`. `name` must contain 1–200
+characters and `address`, when supplied, may contain up to 500 characters;
+`email` must be a valid email address and may contain up to 320 characters.
+Leading and trailing whitespace is removed. The email is stored in lowercase.
 
 Example:
 
@@ -106,7 +106,7 @@ Validation failure (`400`):
 
 ```json
 {
-  "error": "Please provide a name, address, and valid email address",
+  "error": "Please provide a name and valid email address",
   "fields": {
     "email": ["A valid email is required"]
   }

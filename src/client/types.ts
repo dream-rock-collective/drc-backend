@@ -2,7 +2,7 @@ export type Registration = {
   id: number;
   name: string;
   email: string;
-  address: string;
+  address: string | null;
   birthday: string | null;
   notes: string | null;
   stripe_payment_intent_id: string | null;

@@ -22,7 +22,22 @@ const missingAddress = await fetch(`${baseURL}/register`, {
   headers: jsonHeaders,
   body: JSON.stringify({ name: "Smoke Test", email: "smoke@example.com" }),
 });
-assert(missingAddress.status === 400, "missing address should return 400");
+assert(missingAddress.status === 201, "missing address should be accepted");
+const missingAddressBody = (await missingAddress.json()) as {
+  registration: { address: string | null };
+};
+assert(missingAddressBody.registration.address === null, "missing address should be stored as null");
+
+const blankAddress = await fetch(`${baseURL}/register`, {
+  method: "POST",
+  headers: jsonHeaders,
+  body: JSON.stringify({ name: "Smoke Test", email: `blank-${Date.now()}@example.com`, address: "   " }),
+});
+assert(blankAddress.status === 201, "blank address should be accepted");
+const blankAddressBody = (await blankAddress.json()) as {
+  registration: { address: string | null };
+};
+assert(blankAddressBody.registration.address === null, "blank address should be stored as null");
 
 const unauthenticated = await fetch(`${baseURL}/registrations`);
 assert(unauthenticated.status === 401, "unauthenticated registrations should return 401");

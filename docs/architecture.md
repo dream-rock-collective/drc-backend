@@ -71,7 +71,7 @@ Since migrations are starting fresh (see [Section 5](#5-migrations)), there's no
 | id                 | serial / pk | |
 | name               | text, not null | |
 | email              | text, not null | stored lowercased |
-| address            | text, not null | |
+| address            | text, nullable | optional mailing address |
 | notes              | text, nullable | admin-only plain-text note, maximum 5,000 characters |
 | stripe_payment_intent_id | text, nullable | Stripe PaymentIntent ID for one-time payments |
 | created_at         | timestamp, not null, default now() | |
@@ -99,7 +99,7 @@ export const up = async (sql: Sql) => {
       id serial PRIMARY KEY,
       name text NOT NULL,
       email text NOT NULL,
-      address text NOT NULL,
+      address text,
       stripe_payment_id text,
       created_at timestamp NOT NULL DEFAULT now(),
       deleted_at timestamp
@@ -130,7 +130,7 @@ All endpoints live directly off the root — **no `/api` prefix** anywhere, sinc
 
 ### 6.1 `POST /register`
 
-Renamed from `POST /api/registrations`. Same behavior as today, plus the new **required** `address` field.
+Renamed from `POST /api/registrations`. Same behavior as today, with an optional `address` field.
 
 **Request:**
 ```json
@@ -142,7 +142,7 @@ Renamed from `POST /api/registrations`. Same behavior as today, plus the new **r
 { "registration": { "id": 42, "name": "Jordan Alvarez", "email": "jordan@example.com", "address": "123 Main St, Springfield", "created_at": "2026-08-12T18:03:00.000Z" } }
 ```
 
-**Validation error — `400`**, same shape as today (`{ error, fields }`). `address` is validated the same way `name` is (trimmed, non-empty, required) — a missing or blank `address` is a validation failure.
+**Validation error — `400`**, same shape as today (`{ error, fields }`). `address`, when supplied, is trimmed and limited to 500 characters; missing or blank values are stored as `null`.
 
 ### 6.2 `GET /registrations`
 
@@ -280,7 +280,7 @@ Ordered so each chunk is a coherent, independently reviewable unit of work, and 
 
 1. **Migration tooling + baseline schema.** Build the `/migrations` runner (`bun run migrations`, `schema_migrations` tracking table, the TS-script format), write `0001_baseline.ts` creating the `registrations` table per [Section 4](#4-data-model), and remove `docker/init.sql` plus its volume mount from `docker-compose.yml`.
 2. **Auth foundation.** Install and configure Better Auth with its Hono integration under `/auth/*`, generate/write its schema migration, seed the single admin account, add the session-check middleware, remove the old Basic Auth middleware and env vars.
-3. **`/register` + real `/health`.** Rename `POST /api/registrations` to `POST /register`, require `address`. Add the `SELECT 1` DB check to `/health`, returning `503` + `{status: "error"}` on failure.
+3. **`/register` + real `/health`.** Rename `POST /api/registrations` to `POST /register`, support an optional `address`. Add the `SELECT 1` DB check to `/health`, returning `503` + `{status: "error"}` on failure.
 4. **`GET /registrations`.** Authenticated JSON dump endpoint per [6.2](#62-get-registrations). Remove the old server-rendered HTML admin page and its helpers (`admin-html.ts`, the HTML-building parts of `utils.ts`).
 5. **Admin frontend scaffold.** New Vite + React app: login page, protected table route (deleted rows filtered from render), the localStorage-mirror data-loading pattern, the export button, hand-written CSS.
 6. **`POST /modify-registration` + edit/delete UI.** Backend endpoint per [6.3](#63-post-modify-registration-stretch-goal), plus the per-row edit/delete controls in the admin table.
