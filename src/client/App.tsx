@@ -3,6 +3,7 @@ import { fetchRegistrations, modifyRegistration, signIn, signOut } from "./api";
 import type { Registration } from "./types";
 
 const cacheKey = "dreamrock:registrations";
+const backupTimestampKey = "dreamrock:registrations:last-backup";
 
 const readCache = (): Registration[] => {
   try {
@@ -13,8 +14,23 @@ const readCache = (): Registration[] => {
   }
 };
 
-const saveCache = (registrations: Registration[]): void => {
-  localStorage.setItem(cacheKey, JSON.stringify(registrations));
+const readBackupTimestamp = (): string | null => {
+  try {
+    return localStorage.getItem(backupTimestampKey);
+  } catch {
+    return null;
+  }
+};
+
+const saveCache = (registrations: Registration[]): string | null => {
+  const savedAt = new Date().toISOString();
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify(registrations));
+    localStorage.setItem(backupTimestampKey, savedAt);
+    return savedAt;
+  } catch {
+    return null;
+  }
 };
 
 const redirectToLogin = (): void => {
@@ -28,6 +44,43 @@ const planLabel = (plan: Registration["plan"]): string => {
   if (plan === "yearly") return "Yearly";
   return "—";
 };
+
+const formatBackupTimestamp = (value: string | null): string => {
+  if (!value) return "Never";
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf()) ? "Never" : date.toLocaleString();
+};
+
+const csvValue = (value: unknown): string => {
+  const text = value === null || value === undefined ? "" : String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+};
+
+const allocationCsvValue = (
+  allocation: Record<string, number> | null,
+): string => {
+  if (!allocation) return "";
+  return Object.entries(allocation)
+    .map(([charity, amount]) => `${charity}: $${amount}`)
+    .join("; ");
+};
+
+const exportColumns: Array<keyof Registration> = [
+  "id",
+  "name",
+  "email",
+  "address",
+  "birthday",
+  "notes",
+  "stripe_payment_intent_id",
+  "stripe_customer_id",
+  "stripe_subscription_id",
+  "plan",
+  "payment_status",
+  "latest_allocation",
+  "created_at",
+  "deleted",
+];
 
 const paymentIdentifier = (value: string | null) => (
   value ? <code className="payment-id" title={value}>{value}</code> : <span className="muted">—</span>
@@ -51,8 +104,8 @@ const allocationView = (allocation: Record<string, number> | null) => {
   );
 };
 
-const detailValue = (value: React.ReactNode) => (
-  <dd>{value || <span className="muted">—</span>}</dd>
+const detailValue = (value: React.ReactNode, className?: string) => (
+  <dd className={className}>{value || <span className="muted">—</span>}</dd>
 );
 
 export const App = () => {
@@ -118,6 +171,7 @@ const LoginPage = () => {
 
 const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => {
   const [registrations, setRegistrations] = useState<Registration[]>(readCache);
+  const [lastBackup, setLastBackup] = useState<string | null>(readBackupTimestamp);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -128,7 +182,8 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
       .then((fresh) => {
         if (!active) return;
         setRegistrations(fresh);
-        saveCache(fresh);
+        const savedAt = saveCache(fresh);
+        if (savedAt) setLastBackup(savedAt);
       })
       .catch((reason) => {
         if (!active) return;
@@ -152,12 +207,22 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
     [registrations],
   );
 
+  const analytics = useMemo(() => visibleRegistrations.reduce(
+    (counts, registration) => {
+      if (registration.plan === "monthly") counts.monthly += 1;
+      else if (registration.plan === "once") counts.once += 1;
+      else if (registration.plan === "yearly") counts.yearly += 1;
+      else counts.newsletter += 1;
+      return counts;
+    },
+    { monthly: 0, once: 0, yearly: 0, newsletter: 0 },
+  ), [visibleRegistrations]);
+
   const patchRegistration = (updated: Registration): void => {
-    setRegistrations((current) => {
-      const next = current.map((registration) => registration.id === updated.id ? updated : registration);
-      saveCache(next);
-      return next;
-    });
+    const next = registrations.map((registration) => registration.id === updated.id ? updated : registration);
+    setRegistrations(next);
+    const savedAt = saveCache(next);
+    if (savedAt) setLastBackup(savedAt);
   };
 
   const exportData = (): void => {
@@ -166,6 +231,24 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
     const link = document.createElement("a");
     link.href = url;
     link.download = "dreamrock-registrations.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCsv = (): void => {
+    const rows = [
+      exportColumns,
+      ...registrations.map((registration) => exportColumns.map((column) => {
+        if (column === "latest_allocation") return allocationCsvValue(registration.latest_allocation);
+        return registration[column];
+      })),
+    ];
+    const csv = rows.map((row) => row.map(csvValue).join(",")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "dreamrock-registrations.csv";
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -182,17 +265,36 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
 
   return (
     <main className="page-shell">
+      <div className="admin-clouds" aria-hidden="true">
+        <img className="admin-cloud admin-cloud-a" src="/cloud.png" alt="" />
+        <img className="admin-cloud admin-cloud-b" src="/cloud.png" alt="" />
+        <img className="admin-cloud admin-cloud-c" src="/cloud.png" alt="" />
+        <img className="admin-cloud admin-cloud-d" src="/cloud.png" alt="" />
+        <img className="admin-cloud admin-cloud-e" src="/cloud.png" alt="" />
+        <img className="admin-cloud admin-cloud-f" src="/cloud.png" alt="" />
+      </div>
+      <p className="backup-status">Last local backup: {formatBackupTimestamp(lastBackup)}</p>
       <header className="page-header">
         <div>
           <p className="eyebrow">Dream Rock Collective</p>
-          <h1>Registrations</h1>
+          <div className="page-title-row">
+            <img className="admin-mark" src="/rock.png" alt="" />
+            <h1>Registrations</h1>
+          </div>
         </div>
         <div className="toolbar">
           <button type="button" className="secondary" onClick={exportData}>Export JSON</button>
+          <button type="button" className="secondary" onClick={exportCsv}>Export CSV</button>
           <button type="button" className="secondary" onClick={async () => { await signOut(); redirectToLogin(); }}>Sign out</button>
         </div>
       </header>
       {error && <p className="form-error" role="alert">{error}</p>}
+      <section className="analytics" aria-label="Registration analytics">
+        <AnalyticsCard label="Monthly" value={analytics.monthly} />
+        <AnalyticsCard label="One-time" value={analytics.once} />
+        <AnalyticsCard label="Yearly" value={analytics.yearly} />
+        <AnalyticsCard label="Newsletter / no payment" value={analytics.newsletter} />
+      </section>
       {loading && registrations.length === 0 ? <p className="muted">Loading registrations…</p> : (
         <section className="table-card desktop-registrations">
           <table>
@@ -238,6 +340,14 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
   );
 };
 
+const AnalyticsCard = ({ label, value }: { label: string; value: number }) => (
+  <article className="analytics-card">
+    <strong>{label}</strong>
+    <span>{value}</span>
+    <small>registrations</small>
+  </article>
+);
+
 const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onDelete, onError }: {
   registration: Registration;
   editing: boolean;
@@ -254,12 +364,12 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
       onSaved={onSaved}
       onError={onError}
     /></td> : <>
-      <td>{registration.id}</td>
+      <td className="monospace">{registration.id}</td>
       <td>{registration.name}</td>
       <td>{registration.email}</td>
       <td>{registration.address || <span className="muted">—</span>}</td>
       <td>{registration.birthday || <span className="muted">—</span>}</td>
-      <td>{new Date(registration.created_at).toLocaleString()}</td>
+      <td className="monospace">{new Date(registration.created_at).toLocaleString()}</td>
       <td><span className={`payment-status payment-status-${registration.payment_status}`}>
         {registration.payment_status}
       </span></td>
@@ -379,7 +489,7 @@ const RegistrationCard = ({ registration, editing, onEdit, onCancel, onSaved, on
       <summary>View registration details</summary>
       <dl>
         <dt>Address</dt>{detailValue(registration.address)}
-        <dt>Created</dt>{detailValue(new Date(registration.created_at).toLocaleString())}
+        <dt>Created</dt>{detailValue(new Date(registration.created_at).toLocaleString(), "monospace")}
         <dt>Payment intent ID</dt>{detailValue(paymentIdentifier(registration.stripe_payment_intent_id))}
         <dt>Customer ID</dt>{detailValue(paymentIdentifier(registration.stripe_customer_id))}
         <dt>Subscription ID</dt>{detailValue(paymentIdentifier(registration.stripe_subscription_id))}
