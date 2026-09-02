@@ -195,11 +195,14 @@ button:focus-visible:not(:disabled) {
 }
 
 button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--line);
   outline-offset: 3px;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
 }
 
 button:disabled {
@@ -245,22 +248,25 @@ button.secondary {
 
 .analytics-card {
   display: grid;
-  min-height: 104px;
-  padding: 0.75rem 0.85rem;
+  width: 100%;
+  max-width: 200px;
+  min-height: 94px;
+  padding: 0.5rem 0.65rem;
   border: 2px solid var(--line);
   background: var(--white);
-  box-shadow: -4px 4px 0 var(--line);
+  text-align: center;
+  justify-self: start;
 }
 
 .analytics-card strong {
-  align-self: start;
-  font-size: 0.78rem;
-  line-height: 1.1;
+  align-self: center;
+  font-size: 0.86rem;
+  line-height: 1.15;
 }
 
 .analytics-card span {
   align-self: center;
-  font-size: 2.5rem;
+  font-size: 2.15rem;
   font-weight: 800;
   line-height: 0.9;
 }
@@ -271,13 +277,18 @@ button.secondary {
   font-size: 0.7rem;
 }
 
+.analytics-price {
+  color: #777 !important;
+  font-size: 0.78rem !important;
+  font-weight: 800;
+}
+
 .table-card {
   position: relative;
   z-index: 1;
   overflow-x: auto;
   border: 2px solid var(--line);
   background: var(--white);
-  box-shadow: -6px 6px 0 var(--line);
 }
 
 .mobile-registrations {
@@ -288,7 +299,7 @@ table {
   width: 100%;
   min-width: 1780px;
   border-collapse: collapse;
-  text-align: left;
+  text-align: center;
 }
 
 th,
@@ -328,13 +339,13 @@ tr:last-child td {
 .allocation-list {
   display: grid;
   gap: 0.25rem;
-  text-align: left;
+  text-align: center;
 }
 
 .allocation-item {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  justify-content: center;
   gap: 0.6rem;
   padding: 0.2rem 0.35rem;
   background: var(--blue);
@@ -404,7 +415,6 @@ tr:last-child td {
   padding: 2rem;
   border: 2px solid var(--line);
   background: var(--white);
-  box-shadow: -6px 6px 0 var(--line);
 }
 
 .auth-card h1 {
@@ -415,6 +425,10 @@ tr:last-child td {
   display: grid;
   gap: 1rem;
   margin-top: 1.5rem;
+}
+
+.stack-form button {
+  margin-top: 0.7rem;
 }
 
 label {
@@ -471,7 +485,6 @@ textarea {
   padding: 0.9rem;
   border: 2px solid var(--line);
   background: var(--white);
-  box-shadow: -4px 4px 0 var(--line);
 }
 
 .registration-card-header {
@@ -608,11 +621,11 @@ textarea {
   }
 
   .analytics-card {
-    min-height: 92px;
+    min-height: 90px;
   }
 
   .analytics-card span {
-    font-size: 2.1rem;
+    font-size: 1.95rem;
   }
 
   .desktop-registrations {

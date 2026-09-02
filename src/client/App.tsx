@@ -82,6 +82,22 @@ const exportColumns: Array<keyof Registration> = [
   "deleted",
 ];
 
+const planPrices = {
+  monthly: 10,
+  yearly: 110,
+  once: 12,
+} as const;
+
+const planTotalLabel = (
+  plan: keyof typeof planPrices,
+  count: number,
+): string => {
+  const total = `$${count * planPrices[plan]}`;
+  if (plan === "monthly") return `${total} (per month)`;
+  if (plan === "yearly") return `${total} (per year)`;
+  return total;
+};
+
 const paymentIdentifier = (value: string | null) => (
   value ? <code className="payment-id" title={value}>{value}</code> : <span className="muted">—</span>
 );
@@ -290,10 +306,22 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
       </header>
       {error && <p className="form-error" role="alert">{error}</p>}
       <section className="analytics" aria-label="Registration analytics">
-        <AnalyticsCard label="Monthly" value={analytics.monthly} />
-        <AnalyticsCard label="One-time" value={analytics.once} />
-        <AnalyticsCard label="Yearly" value={analytics.yearly} />
-        <AnalyticsCard label="Newsletter / no payment" value={analytics.newsletter} />
+        <AnalyticsCard
+          label="Monthly Registrations"
+          value={analytics.monthly}
+          price={planTotalLabel("monthly", analytics.monthly)}
+        />
+        <AnalyticsCard
+          label="One-time Registrations"
+          value={analytics.once}
+          price={planTotalLabel("once", analytics.once)}
+        />
+        <AnalyticsCard
+          label="Yearly Registrations"
+          value={analytics.yearly}
+          price={planTotalLabel("yearly", analytics.yearly)}
+        />
+        <AnalyticsCard label="No Payment" value={analytics.newsletter} />
       </section>
       {loading && registrations.length === 0 ? <p className="muted">Loading registrations…</p> : (
         <section className="table-card desktop-registrations">
@@ -340,11 +368,15 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
   );
 };
 
-const AnalyticsCard = ({ label, value }: { label: string; value: number }) => (
+const AnalyticsCard = ({ label, value, price }: {
+  label: string;
+  value: number;
+  price?: string;
+}) => (
   <article className="analytics-card">
     <strong>{label}</strong>
     <span>{value}</span>
-    <small>registrations</small>
+    {price && <small className="analytics-price">{price}</small>}
   </article>
 );
 
