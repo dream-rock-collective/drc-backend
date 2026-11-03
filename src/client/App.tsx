@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchRegistrations, modifyRegistration, signIn, signOut } from "./api";
 import type { Registration } from "./types";
+import { defaultExportSelection, exportColumns, exportPlans, filterExportRegistrations, parseExportSelection, registrationsCsv } from "./export";
+import type { ExportSelection } from "./export";
 
 const cacheKey = "dreamrock:registrations";
 const backupTimestampKey = "dreamrock:registrations:last-backup";
@@ -50,37 +52,6 @@ const formatBackupTimestamp = (value: string | null): string => {
   const date = new Date(value);
   return Number.isNaN(date.valueOf()) ? "Never" : date.toLocaleString();
 };
-
-const csvValue = (value: unknown): string => {
-  const text = value === null || value === undefined ? "" : String(value);
-  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-};
-
-const allocationCsvValue = (
-  allocation: Record<string, number> | null,
-): string => {
-  if (!allocation) return "";
-  return Object.entries(allocation)
-    .map(([charity, amount]) => `${charity}: $${amount}`)
-    .join("; ");
-};
-
-const exportColumns: Array<keyof Registration> = [
-  "id",
-  "name",
-  "email",
-  "address",
-  "birthday",
-  "notes",
-  "stripe_payment_intent_id",
-  "stripe_customer_id",
-  "stripe_subscription_id",
-  "plan",
-  "payment_status",
-  "latest_allocation",
-  "created_at",
-  "deleted",
-];
 
 const planPrices = {
   monthly: 10,
@@ -191,6 +162,7 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -241,34 +213,6 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
     if (savedAt) setLastBackup(savedAt);
   };
 
-  const exportData = (): void => {
-    const blob = new Blob([JSON.stringify(registrations, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "dreamrock-registrations.json";
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const exportCsv = (): void => {
-    const rows = [
-      exportColumns,
-      ...registrations.map((registration) => exportColumns.map((column) => {
-        if (column === "latest_allocation") return allocationCsvValue(registration.latest_allocation);
-        return registration[column];
-      })),
-    ];
-    const csv = rows.map((row) => row.map(csvValue).join(",")).join("\r\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "dreamrock-registrations.csv";
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   const deleteRegistration = async (registration: Registration): Promise<void> => {
     if (!window.confirm(`Delete registration #${registration.id}?`)) return;
     try {
@@ -289,6 +233,7 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
         <img className="admin-cloud admin-cloud-e" src="/cloud.png" alt="" />
         <img className="admin-cloud admin-cloud-f" src="/cloud.png" alt="" />
       </div>
+      {exportOpen && <ExportModal registrations={registrations} onClose={() => setExportOpen(false)} />}
       <p className="backup-status">Last local backup: {formatBackupTimestamp(lastBackup)}</p>
       <header className="page-header">
         <div>
@@ -299,8 +244,7 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
           </div>
         </div>
         <div className="toolbar">
-          <button type="button" className="secondary" onClick={exportData}>Export JSON</button>
-          <button type="button" className="secondary" onClick={exportCsv}>Export CSV</button>
+          <button type="button" className="secondary" onClick={() => setExportOpen(true)}>Export CSV</button>
           <button type="button" className="secondary" onClick={async () => { await signOut(); redirectToLogin(); }}>Sign out</button>
         </div>
       </header>
@@ -536,4 +480,76 @@ const RegistrationCard = ({ registration, editing, onEdit, onCancel, onSaved, on
       onError={onError}
     /></div>}
   </article>;
+};
+
+const exportSelectionKey = "dreamrock:registrations:export-selection";
+
+const ExportModal = ({ registrations, onClose }: {
+  registrations: Registration[];
+  onClose: () => void;
+}) => {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [selection, setSelection] = useState<ExportSelection>(() => {
+    try {
+      return parseExportSelection(localStorage.getItem(exportSelectionKey));
+    } catch {
+      return defaultExportSelection();
+    }
+  });
+  const matching = filterExportRegistrations(registrations, selection);
+
+  useEffect(() => {
+    const element = dialog.current;
+    element?.showModal();
+    return () => element?.close();
+  }, []);
+
+  const download = (event: React.FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    if (!selection.columns.length || !matching.length) return;
+    const blob = new Blob([registrationsCsv(matching, selection)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "dreamrock-registrations.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+    try {
+      localStorage.setItem(exportSelectionKey, JSON.stringify(selection));
+    } catch {
+      // Download remains available when browser storage is unavailable.
+    }
+    onClose();
+  };
+
+  return <dialog ref={dialog} className="export-modal" aria-labelledby="export-title" onCancel={onClose}>
+    <form onSubmit={download}>
+      <h2 id="export-title">Export CSV</h2>
+      <fieldset>
+        <legend>Payment plans</legend>
+        {exportPlans.map(({ value, label }) => <label key={value ?? "none"}>
+          <input type="checkbox" checked={selection.plans.includes(value)} onChange={(event) => {
+            setSelection({ ...selection, plans: event.target.checked
+              ? [...selection.plans, value] : selection.plans.filter((plan) => plan !== value) });
+          }} />
+          {label}
+        </label>)}
+      </fieldset>
+      <fieldset>
+        <legend>Include columns</legend>
+        {exportColumns.map(({ value, label }) => <label key={value}>
+          <input type="checkbox" checked={selection.columns.includes(value)} onChange={(event) => {
+            setSelection({ ...selection, columns: event.target.checked
+              ? [...selection.columns, value] : selection.columns.filter((column) => column !== value) });
+          }} />
+          {label}
+        </label>)}
+      </fieldset>
+      <p role="status">{matching.length} registration{matching.length === 1 ? "" : "s"} selected</p>
+      <div className="export-actions">
+        <button type="button" className="secondary" onClick={onClose}>Cancel</button>
+        <button type="submit" disabled={!selection.columns.length || !matching.length}>Export CSV</button>
+      </div>
+    </form>
+  </dialog>;
 };
