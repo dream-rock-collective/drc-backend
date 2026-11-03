@@ -1,0 +1,110 @@
+# Website editor handoff
+
+The editor changes the initial registration page only. Text is stored in the
+registration-site checkout at `content/initial-page.json`. Images are selected
+from that checkout's existing `public/` assets. Uploads and other pages are not
+part of this release.
+
+## Local setup
+
+Keep the existing database, authentication, and Stripe settings in the backend
+`.env`. Add these publishing settings:
+
+```dotenv
+SITE_PUBLISH_MODE=local
+SITE_CHECKOUT_PATH=../registration-site
+BETTER_AUTH_URL=http://localhost:6942
+REGISTRATION_SITE_ORIGIN=http://localhost:5173
+```
+
+Paths resolve from the backend working directory when running Bun directly.
+Local Publish writes the JSON file without committing or pushing. Use a copy of
+the site checkout if you do not want test edits in your working tree.
+
+Install locked dependencies in both repositories. In `drc-backend`, run
+`bun run build` and `bun run start`, then open
+`http://localhost:6942/editor` and sign in with your existing admin account.
+Serve the registration site separately with `bun run dev` from its directory.
+Use the exact host configured in `BETTER_AUTH_URL` when opening the admin;
+`localhost` and `127.0.0.1` are different origins.
+
+## Remote publishing
+
+Use a dedicated, clean registration-site clone on the configured branch. That
+branch must already contain the JSON conversion and preview support. Do not use
+your normal development checkout as the production publisher checkout.
+
+```dotenv
+SITE_PUBLISH_MODE=remote
+SITE_CHECKOUT_PATH=/absolute/path/to/registration-site-publisher
+SITE_REPOSITORY=git@github.com:dream-rock-collective/registration-site.git
+SITE_PUBLISH_BRANCH=main
+SITE_GIT_NAME=Dream Rock Editor
+SITE_GIT_EMAIL=YOUR_COMMIT_EMAIL
+SITE_DEPLOY_KEY_PATH=/absolute/path/to/registration-site-deploy-key
+SITE_KNOWN_HOSTS_PATH=/absolute/path/to/known_hosts
+BETTER_AUTH_URL=https://YOUR_ADMIN_HOST
+REGISTRATION_SITE_ORIGIN=https://dreamrock.co
+```
+
+Create an SSH key specifically for this site repository and register its public
+key as a GitHub deploy key with write access. Keep the private key out of both
+repositories. Populate the known-hosts file with the Git host's independently
+verified public host keys. The publisher requires strict host verification.
+The checkout's fetch and push origins must each have exactly one URL matching
+`SITE_REPOSITORY`, and its current branch must match `SITE_PUBLISH_BRANCH`.
+
+Remote Publish commits only the content JSON and pushes the configured branch.
+A push to `main` triggers the existing GitHub Pages workflow. A successful push
+does not mean that deployment has finished; check GitHub Actions separately.
+For a non-production trial, provision an existing test branch and matching
+dedicated checkout, then configure that branch instead of `main`.
+
+For Docker, the host checkout is mounted at `/site`. Start with
+`docker compose -f docker-compose.yml -f compose.site-ssh.yml up -d --build`
+for SSH publishing; local mode does not need the SSH overlay. Environment key
+paths are host paths for the overlay mounts. Its container paths are configured
+by the overlay. Run one publishing service per checkout.
+
+## Manual acceptance checklist
+
+1. Open Registrations, choose Website editor, and confirm the displayed mode.
+2. Edit a join label and section body. Try bold, italic, links, and lists. Reload
+   and confirm the browser restores the unpublished draft.
+3. Add a section, move it, choose an existing image, and edit its alt text.
+   Remove a section and check its confirmation.
+4. Publish in local mode and inspect the JSON diff and the running site. Confirm
+   form request keys remain `name`, `email`, `address`, and `birthday`.
+5. Change the JSON outside the editor, then try publishing the old draft.
+   Publication must stop and preserve the draft for review against newer copy.
+6. Discard a draft and confirm the current published content returns. Sign out
+   and confirm content APIs are unavailable without a session.
+7. For remote acceptance, use a disposable branch/remote. Verify the commit
+   changes only the JSON, then test a rejected push and Retry push. Never use
+   production publishing as a smoke test.
+
+Drafts live in this browser, scoped to the administrator and site checkout.
+They are not shared between devices. Export draft provides a downloadable
+backup; clearing browser storage removes unpublished drafts.
+
+## Automated checks
+
+Backend: `bun test`, `bun run lint`, and `bun run build`.
+Registration site: `bun test`, `bun run lint`, and `bun run build`.
+The backend tests use temporary local repositories and bare remotes, without
+contacting GitHub. See `plans/content-editor.md` in each repository for recorded
+verification and remaining acceptance work.
+
+`compose.editor-test.yml` provides an isolated temporary database for real auth
+checks; the backend README documents its migration and seeding commands. Do not
+run smoke tests or migrations against an unidentified database.
+
+## Recovery
+
+A rejected push keeps the generated commit for retry. Retry the same content
+before making further changes. Changed or diverged Git state requires operator
+review; the publisher never force-pushes or resets your changes. An interrupted
+process may leave `.git/site-publisher.lock` (remote) or a temporary publisher
+lock (local). Remove a lock only after confirming no publisher process is
+running. A crash between creating a commit and saving retry metadata requires
+operator reconciliation of the commit and remote before publishing resumes.

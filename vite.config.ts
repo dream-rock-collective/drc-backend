@@ -10,6 +10,7 @@ export default defineConfig({
       "/register": "http://localhost:6942",
       "/registrations": "http://localhost:6942",
       "/modify-registration": "http://localhost:6942",
+      "/api/site-content": "http://localhost:6942",
     },
   },
 });

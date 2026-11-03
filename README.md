@@ -97,3 +97,100 @@ Authenticated API endpoints:
 
 Migrations are forward-only and run explicitly with `bun run migrations`.
 Docker does not initialize the schema automatically.
+
+## Site content publishing
+
+The content editor uses `content/initial-page.json` in an existing registration-site
+checkout. Configure the `SITE_*` settings in `.env.sample`; no Git credentials are
+sent to the browser. The checkout is provisioned by the operator, not cloned by
+an HTTP request. It must be outside the backend repository.
+
+`SITE_PUBLISH_MODE=local` writes the JSON atomically without committing or accessing
+any remote. `SITE_CHECKOUT_PATH=../registration-site` works for adjacent local
+repositories. Compose mounts that host path at `/site` and sets the container's
+checkout path automatically.
+
+For `remote`, clone a dedicated registration-site checkout and check out
+`SITE_PUBLISH_BRANCH`. Set its fetch and push origin to exactly `SITE_REPOSITORY`.
+Set `SITE_GIT_NAME` and `SITE_GIT_EMAIL`. The publisher fetches that existing branch,
+fast-forwards only, and commits only the content document. It rejects untracked,
+staged, modified, or diverging files. Do not use your development checkout for
+remote publishing. A push to `main` triggers the site's existing Pages workflow;
+a successful push does not mean deployment has finished.
+
+Create a repository-scoped SSH deploy key with write access. Store its private key
+outside either repository with restrictive permissions. Populate a known-hosts
+file after verifying the server's host-key fingerprint through a trusted channel.
+Set `SITE_DEPLOY_KEY_PATH` and `SITE_KNOWN_HOSTS_PATH` to those files. SSH uses only
+that key, requires matching known hosts, and never prompts. For Compose, use:
+
+```sh
+docker compose -f docker-compose.yml -f compose.site-ssh.yml up -d --build
+```
+
+The optional overlay mounts both SSH files read-only. Ensure the container user
+can read them and write the checkout; never commit keys or put them in the image.
+HTTPS repositories can use host-provisioned Git credentials, but must not embed
+credentials in the repository URL. Explicit local repository paths are supported
+for isolated integration tests.
+
+Edits carry the SHA-256 revision of the loaded file. A changed file blocks publishing
+until the editor reloads and reviews the newer version. Publishing operations are
+serialized within the process. Remote mode uses a checkout `.git/site-publisher.lock`
+directory shared by processes and containers. Local mode uses a host temporary-
+directory lock; use one local-mode container per checkout.
+
+If a push fails, the commit and `.git/site-publisher-pending.json` remain for retry.
+Retry the same content before making further edits. The publisher verifies the
+pending commit before pushing it; it never force-pushes. If the remote advanced,
+reconcile manually while preserving the draft. An interrupted commit or corrupted
+pending marker requires operator inspection; no automatic reset discards work.
+After confirming no publisher process is running, a stale
+`.git/site-publisher.lock` (remote) or
+`/tmp/drc-site-publisher-<checkout-sha256>.lock` (local) directory can be removed manually.
+
+Run focused publisher tests with `bun test tests/site-publishing.test.ts`.
+
+### Content editor API
+
+The admin editor uses the existing administrator session. All content responses
+have `Cache-Control: no-store` and require authentication:
+
+- `GET /api/site-content` returns `{ content, revision, mode, pending, draftKey }`.
+  `draftKey` scopes browser drafts to the configured checkout and signed-in user.
+- `GET /api/site-content/images` returns `{ images: string[] }`, containing
+  eligible root-relative paths from the site's existing `public/` assets.
+- `POST /api/site-content/publish` accepts `{ content, revision }` and returns the
+  updated snapshot, with `commit` when a Git commit was pushed. A successful push
+  does not confirm that GitHub Pages deployment has finished.
+
+Publishing requires `Content-Type: application/json`, a request `Origin` equal to
+the origin in `BETTER_AUTH_URL`, and a body no larger than 512 KB. Set
+`BETTER_AUTH_URL` to the URL used to open the admin, including when using the Vite
+development proxy. Missing sessions return 401, wrong origins 403, invalid copy
+400, stale revisions 409, and a busy publisher 423. The browser must keep its
+draft when publication fails and reload/review newer copy before retrying a
+conflict. A pending failed push may only retry the same content.
+
+The backend loads the registration site's authoritative `src/content.ts`
+validator from the operator-configured checkout, after synchronizing it. Keep
+that checkout trusted and deploy the matching site code before enabling editing.
+Section images must exist as regular files under `public/`; symlinks and paths
+outside that directory are excluded. No arbitrary filesystem path is accepted
+from an API request.
+
+Run content-boundary tests with `bun test tests/site-content.test.ts`.
+
+
+For authenticated editor browser verification, `compose.editor-test.yml` defines
+an isolated PostgreSQL service with temporary in-memory storage. Start it with
+`docker compose -p drc-editor-test -f compose.editor-test.yml up -d --wait`.
+Its local connection string is
+`postgres://editor_test:editor_test_only@127.0.0.1:55481/drc_editor_test`.
+Run migrations and seed an administrator with that explicit `DATABASE_URL` and
+test-only `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `BETTER_AUTH_SECRET`, and
+`BETTER_AUTH_URL`; use those same environment values for the backend. Point
+`SITE_CHECKOUT_PATH` at a disposable copy of registration-site. Stop only this
+fixture with `docker compose -p drc-editor-test -f compose.editor-test.yml down`.
+Do not combine the fixture with the application Compose file or use production
+credentials. Its data is discarded when the test container stops.

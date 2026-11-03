@@ -1,0 +1,18 @@
+# Isolated editor verification only. Never combine with docker-compose.yml.
+# docker compose -p drc-editor-test -f compose.editor-test.yml up -d --wait
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: drc_editor_test
+      POSTGRES_USER: editor_test
+      POSTGRES_PASSWORD: editor_test_only
+    ports:
+      - "127.0.0.1:55481:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U editor_test -d drc_editor_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

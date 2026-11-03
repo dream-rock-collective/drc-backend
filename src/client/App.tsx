@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchRegistrations, modifyRegistration, signIn, signOut } from "./api";
 import type { Registration } from "./types";
+import { ContentEditor } from "./ContentEditor";
 
 const cacheKey = "dreamrock:registrations";
 const backupTimestampKey = "dreamrock:registrations:last-backup";
@@ -136,6 +137,8 @@ export const App = () => {
   if (path === "/login") {
     return <LoginPage />;
   }
+
+  if (path === "/editor") return <ContentEditor onUnauthenticated={redirectToLogin} />;
 
   return <Dashboard onUnauthenticated={redirectToLogin} />;
 };
@@ -299,6 +302,7 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
           </div>
         </div>
         <div className="toolbar">
+          <button type="button" className="secondary" onClick={() => { window.location.href = "/editor"; }}>Website editor</button>
           <button type="button" className="secondary" onClick={exportData}>Export JSON</button>
           <button type="button" className="secondary" onClick={exportCsv}>Export CSV</button>
           <button type="button" className="secondary" onClick={async () => { await signOut(); redirectToLogin(); }}>Sign out</button>
