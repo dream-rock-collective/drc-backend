@@ -120,6 +120,14 @@ Handoff: [setup, env values, manual tests, and recovery](../docs/content-editor.
 
 ## Boundaries
 
+Latest refinements: Member Pane naming, Unicode link/unlink controls, square
+website-style width segments, white body-wide grid, and working desktop sticky
+preview (the editor ancestor now permits visible overflow). Removed draft export
+and routine preview refresh; draft messages remain automatic and errors offer
+Retry. Footer emoji is part of editable site text. Focused editor/preview tests,
+lint/typecheck/build pass; one compact browser batch confirmed pinned scrolling,
+body styling, controls and footer, and mobile flow without horizontal overflow.
+
 Only initial-page conversion; other pages later use separate content documents.
 No image uploads, submodule, production publishing, or unrelated refactoring.
 Record subsequent integration and verification outcomes here.

@@ -187,7 +187,7 @@ Install the registration site's locked dependencies in `SITE_CHECKOUT_PATH`
 with `bun install --frozen-lockfile`. The backend runs that checkout's Vite
 preview build; it never installs dependencies automatically. The editor requests
 `GET /api/site-preview` with its administrator session and receives an isolated
-iframe URL and a frame token. Use the editor's refresh control after changing
+iframe URL and a frame token. Reload the editor after changing
 site code or images. Source/configuration/assets are fingerprinted and unchanged
 builds are reused; typing sends browser messages without rebuilding.
 

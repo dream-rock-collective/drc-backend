@@ -691,13 +691,19 @@ textarea {
   }
 }
 
-.content-editor-shell {
-  max-width: 1600px;
-  margin: 0 auto;
+body:has(.content-editor-shell) {
+  min-height: 100vh;
+  background-color: var(--white);
   background-image:
     linear-gradient(rgb(5 5 5 / 4%) 1px, transparent 1px),
     linear-gradient(90deg, rgb(5 5 5 / 4%) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+.content-editor-shell {
+  max-width: 1600px;
+  margin: 0 auto;
+  overflow: visible;
   font-weight: 400;
 }
 
@@ -934,6 +940,8 @@ textarea {
   position: sticky;
   top: 1rem;
   min-width: 0;
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
   padding: 1rem;
   border: 2px solid var(--line);
   background: var(--white);
@@ -954,22 +962,24 @@ textarea {
 .preview-width {
   display: inline-flex;
   gap: 0;
-  padding: 3px;
-  border: 1px solid #c2d6e6;
-  border-radius: 6px;
-  background: #eaf3fa;
+  border: 2px solid var(--line);
+  background: var(--white);
 }
 
 .preview-width button {
   border: 0;
-  border-radius: 3px;
+  border-radius: 0;
   background: transparent;
   font-size: 0.8rem;
   font-weight: 600;
 }
 
 .preview-width [aria-pressed="true"] {
-  background: var(--white);
+  background: var(--yellow);
+}
+
+.preview-width button + button {
+  border-left: 2px solid var(--line);
 }
 
 .preview-width button:hover:not(:disabled),
@@ -1003,6 +1013,8 @@ textarea {
 
   .content-preview {
     position: static;
+    max-height: none;
+    overflow: visible;
     grid-row: 1;
   }
 }

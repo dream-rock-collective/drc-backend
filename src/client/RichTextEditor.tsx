@@ -73,8 +73,8 @@ export function RichTextEditor({ label, value, onChange, disabled = false }: { l
         if (href === null) return;
         if (!safeLink(href)) { window.alert("Enter an HTTP, mailto, relative-path, or fragment link."); return; }
         command("createLink", href);
-      }}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m10 13 4-4M8 15l-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0M13 9l2-2a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0" /></svg></button>
-      <button type="button" className="secondary" aria-label="Remove link" title="Remove link" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => command("unlink")}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m3 3 18 18M8 15l-2 2a4 4 0 0 1-6-6l4-4M13 9l2-2a4 4 0 0 1 6 6l-3 3M9 13l2-2" /></svg></button>
+      }}><span aria-hidden="true">🔗</span></button>
+      <button type="button" className="secondary" aria-label="Remove link" title="Remove link" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => command("unlink")}><span aria-hidden="true">⛓️‍💥</span></button>
     </div>
     <div ref={editor} className="rich-input" role="textbox" aria-multiline="true" aria-labelledby={`${id}-label`} contentEditable={!disabled} suppressContentEditableWarning onInput={update} onPaste={(event) => {
       event.preventDefault();

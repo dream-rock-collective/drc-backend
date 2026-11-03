@@ -4,7 +4,7 @@ import { normalizeRichText } from "./RichTextEditor";
 
 function changeLabel(path: string[]): string {
   const parts = path[0] === "sections" ? [`Section ${Number(path[1]) + 1}`, ...path.slice(2)] : path;
-  return parts.map((part) => part === "join" ? "Join Pane" : part.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase())).join(" / ");
+  return parts.map((part) => part === "join" ? "Join Pane" : part === "member" ? "Member Pane" : part.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase())).join(" / ");
 }
 
 function ChangeValue({ value, rich }: { value: string | undefined; rich: boolean }) {

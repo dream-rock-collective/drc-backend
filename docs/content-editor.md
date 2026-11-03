@@ -5,7 +5,8 @@ registration-site checkout at `content/initial-page.json`. Images are selected
 from that checkout's existing `public/` assets. Uploads and other pages are not
 part of this release.
 
-Editable groups are Join Pane, Member, Messages, Page Sections, and Footer.
+Editable groups are Join Pane, Member Pane, Messages, Page Sections, and Footer.
+The footer text includes its emoji; edit or remove it directly in that field.
 Website metadata, logo labels/alt text, and membership plan labels stay fixed in
 the registration-site code. Existing browser drafts retain their editable text
 while obsolete groups are removed; stale revisions still require review.
@@ -84,8 +85,8 @@ docker compose exec backend sh -c 'cd /site && bun install --frozen-lockfile'
 ```
 
 The editor updates the preview as you type without rebuilding for each edit.
-Use Desktop/Mobile to inspect widths, and Refresh preview after site code or
-assets change. Preview errors preserve the last valid rendered page. Registration,
+Use Desktop/Mobile to inspect widths, and reload the editor after site code or
+assets change. Retry preview is available when loading fails. Preview errors preserve the last valid rendered page. Registration,
 payment, and navigation actions are disabled in the iframe.
 No additional preview environment variables are required. `BETTER_AUTH_URL`
 must match the admin browser origin for sign-in, publishing, and preview.
@@ -111,8 +112,7 @@ must match the admin browser origin for sign-in, publishing, and preview.
    production publishing as a smoke test.
 
 Drafts live in this browser, scoped to the administrator and site checkout.
-They are not shared between devices. Export draft provides a downloadable
-backup; clearing browser storage removes unpublished drafts.
+They are not shared between devices. Clearing browser storage removes unpublished drafts.
 
 ## Automated checks
 
