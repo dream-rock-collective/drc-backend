@@ -1,5 +1,7 @@
 # Dream Rock Collective admin site
 
+See the [documentation index](docs/README.md) for engineering guidance and references.
+
 Hono API and React admin SPA backed by PostgreSQL.
 
 ## Run with Docker

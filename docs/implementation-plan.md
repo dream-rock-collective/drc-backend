@@ -1,5 +1,9 @@
 # Dream Rock Collective Admin SPA Migration Plan
 
+> Historical reference: Past admin SPA migration plan and verification record; not an active task.
+> For current setup and API behavior, use the [repository README](../README.md)
+> and [documentation index](README.md). Historical notes do not override current guidance.
+
 ## Summary
 
 Replace the current Hono server-rendered Basic-Auth admin page with a React/Vite SPA while retaining Hono as the backend and postgres.js for database access.
