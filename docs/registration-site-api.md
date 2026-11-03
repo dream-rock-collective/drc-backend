@@ -1,7 +1,8 @@
 # Registration-site API reference
 
-This is the API contract for the public registration website. The website only
-needs the two unauthenticated endpoints documented here.
+This is the API contract for the public registration website. This reference covers health, registration, and checkout. The
+[repository README](../README.md#public-api) also describes allocation and Stripe
+webhook endpoints; inspect the owning routes for their full behavior.
 
 ## Base URL
 

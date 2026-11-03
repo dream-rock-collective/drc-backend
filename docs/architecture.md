@@ -1,6 +1,10 @@
 # Dream Rock Collective — Admin Architecture
 
-**Status:** Design spec, ready for implementation
+> Historical reference: Original design proposal; contains superseded implementation and product descriptions.
+> For current setup and API behavior, use the [repository README](../README.md)
+> and [documentation index](README.md). Historical notes do not override current guidance.
+
+**Status:** Historical design proposal
 **Scope of this document:** the admin-site backend (Hono + Postgres) and the admin-site frontend (Vite + React) — both live in this document. The registration-site (separate repo) is out of scope beyond the two endpoints it calls (`POST /register`, `GET /health`); its own implementation isn't detailed here. It builds directly on top of the existing `admin-site` codebase (Hono app with `/health`, `/api/registrations`, `/admin`, and its `docker-compose.yml`).
 
 ---
