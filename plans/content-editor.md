@@ -102,8 +102,6 @@ was performed; bare-remote tests cover publishing/rejection/retry behavior.
 
 Handoff: [setup, env values, manual tests, and recovery](../docs/content-editor.md).
 
-## Boundaries
-
 ## Follow-up editor refinements: completed
 
 - Reduced font weights, removed resting button shadows, added symbolic rich-text
