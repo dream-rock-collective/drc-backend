@@ -163,6 +163,7 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const exportButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -233,7 +234,10 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
         <img className="admin-cloud admin-cloud-e" src="/cloud.png" alt="" />
         <img className="admin-cloud admin-cloud-f" src="/cloud.png" alt="" />
       </div>
-      {exportOpen && <ExportModal registrations={registrations} onClose={() => setExportOpen(false)} />}
+      {exportOpen && <ExportModal registrations={registrations} onClose={() => {
+        setExportOpen(false);
+        exportButton.current?.focus();
+      }} />}
       <p className="backup-status">Last local backup: {formatBackupTimestamp(lastBackup)}</p>
       <header className="page-header">
         <div>
@@ -244,7 +248,7 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
           </div>
         </div>
         <div className="toolbar">
-          <button type="button" className="secondary" onClick={() => setExportOpen(true)}>Export CSV</button>
+          <button ref={exportButton} type="button" className="secondary" onClick={() => setExportOpen(true)}>Export CSV</button>
           <button type="button" className="secondary" onClick={async () => { await signOut(); redirectToLogin(); }}>Sign out</button>
         </div>
       </header>
@@ -498,6 +502,11 @@ const ExportModal = ({ registrations, onClose }: {
   });
   const matching = filterExportRegistrations(registrations, selection);
 
+  const close = (): void => {
+    dialog.current?.close();
+    onClose();
+  };
+
   useEffect(() => {
     const element = dialog.current;
     element?.showModal();
@@ -519,10 +528,25 @@ const ExportModal = ({ registrations, onClose }: {
     } catch {
       // Download remains available when browser storage is unavailable.
     }
-    onClose();
+    close();
   };
 
-  return <dialog ref={dialog} className="export-modal" aria-labelledby="export-title" onCancel={onClose}>
+  return <dialog ref={dialog} className="export-modal" aria-labelledby="export-title" onCancel={(event) => {
+    event.preventDefault();
+    close();
+  }} onKeyDown={(event) => {
+    if (event.key !== "Tab") return;
+    const controls = dialog.current?.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, button:not(:disabled)");
+    const first = controls?.[0];
+    const last = controls?.[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }}>
     <form onSubmit={download}>
       <h2 id="export-title">Export CSV</h2>
       <fieldset>
@@ -547,7 +571,7 @@ const ExportModal = ({ registrations, onClose }: {
       </fieldset>
       <p role="status">{matching.length} registration{matching.length === 1 ? "" : "s"} selected</p>
       <div className="export-actions">
-        <button type="button" className="secondary" onClick={onClose}>Cancel</button>
+        <button type="button" className="secondary" onClick={close}>Cancel</button>
         <button type="submit" disabled={!selection.columns.length || !matching.length}>Export CSV</button>
       </div>
     </form>

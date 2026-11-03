@@ -104,3 +104,16 @@ Authenticated API endpoints:
 
 Migrations are forward-only and run explicitly with `bun run migrations`.
 Docker does not initialize the schema automatically.
+
+## Tests
+
+Run `bun run test` for unit tests and `bun run lint` for CSS and TypeScript checks.
+For modal browser tests, install Chromium with `bunx playwright install chromium`,
+then run `bun run test:e2e`. These tests start their own frontend server and mock
+the registration API; no database is required. `bun run smoke-api` checks a running
+API with a seeded administrator and writes test registrations, so use a disposable
+database.
+
+The GitHub Actions **Tests** workflow runs on every push to `main`, including
+merges. It runs lint, unit tests, the frontend build, modal browser tests, and API
+smoke tests against an isolated PostgreSQL service with test-only credentials.
