@@ -114,6 +114,6 @@ the registration API; no database is required. `bun run smoke-api` checks a runn
 API with a seeded administrator and writes test registrations, so use a disposable
 database.
 
-The GitHub Actions **Tests** workflow runs on every push to `main`, including
-merges. It runs lint, unit tests, the frontend build, modal browser tests, and API
+The GitHub Actions **Tests** workflow runs on pull requests and every push to
+`main`, including merges. It runs lint, unit tests, the frontend build, modal browser tests, and API
 smoke tests against an isolated PostgreSQL service with test-only credentials.
