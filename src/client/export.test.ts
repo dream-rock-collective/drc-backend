@@ -30,7 +30,16 @@ describe("CSV exports", () => {
       plans: ["monthly"], columns: ["birthday", "address", "name"],
     })).toBe('Name,Address,Birthday\r\n"River ""Rock"", Jr.","123 Main St\nUnit 2",');
     expect(registrationsCsv([registration], defaultExportSelection()).split("\r\n")[0])
-      .toBe("Name,Email,Address,Birthday");
+      .toBe("ID,Name,Email,Address,Birthday,Created,Payment status,Plan,Payment intent ID,Customer ID,Subscription ID,Allotments,Notes");
+  });
+
+  test("exports plan, numeric IDs, allotments, and empty values", () => {
+    const selection = { plans: ["monthly"], columns: ["id", "plan", "latest_allocation", "notes"] } as const;
+    expect(registrationsCsv([{ ...registration, latest_allocation: { food: 10 } }], {
+      plans: [...selection.plans], columns: [...selection.columns],
+    })).toBe('ID,Plan,Allotments,Notes\r\n1,monthly,"{""food"":10}",');
+    expect(registrationsCsv([{ ...registration, plan: null }], { plans: [null], columns: ["plan"] }))
+      .toBe("Plan\r\n");
   });
 
   test("restores valid preferences and falls back for malformed or empty selections", () => {
@@ -38,7 +47,7 @@ describe("CSV exports", () => {
       .toEqual({ plans: ["monthly", null], columns: ["name", "birthday"] });
     for (const stored of [null, "{", "null", "[]", '{}',
       '{"plans":["other"],"columns":["name"]}',
-      '{"plans":[null],"columns":["notes"]}',
+      '{"plans":[null],"columns":["unknown"]}',
       '{"plans":[],"columns":["name"]}',
       '{"plans":[null],"columns":[]}']) {
       expect(parseExportSelection(stored)).toEqual(defaultExportSelection());

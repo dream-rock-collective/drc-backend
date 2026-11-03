@@ -8,10 +8,19 @@ export const exportPlans = [
 ] as const;
 
 export const exportColumns = [
+  { value: "id", label: "ID" },
   { value: "name", label: "Name" },
   { value: "email", label: "Email" },
   { value: "address", label: "Address" },
   { value: "birthday", label: "Birthday" },
+  { value: "created_at", label: "Created" },
+  { value: "payment_status", label: "Payment status" },
+  { value: "plan", label: "Plan" },
+  { value: "stripe_payment_intent_id", label: "Payment intent ID" },
+  { value: "stripe_customer_id", label: "Customer ID" },
+  { value: "stripe_subscription_id", label: "Subscription ID" },
+  { value: "latest_allocation", label: "Allotments" },
+  { value: "notes", label: "Notes" },
 ] as const;
 
 export type ExportSelection = {
@@ -51,8 +60,8 @@ export const filterExportRegistrations = (
 ): Registration[] => registrations.filter((registration) =>
   !registration.deleted && selection.plans.includes(registration.plan));
 
-const csvValue = (value: string | null): string => {
-  const text = value ?? "";
+const csvValue = (value: Registration[typeof exportColumns[number]["value"]]): string => {
+  const text = value === null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 

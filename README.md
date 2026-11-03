@@ -90,7 +90,8 @@ The React admin SPA is available at `http://localhost:6942/login`.
 
 **Export CSV** opens a modal with payment-plan and column checkboxes. It exports
 only active registrations matching the selected plans, with any combination of
-Name, Email, Address, and Birthday. “No payment” means no plan; payment status
+all data columns shown in the registration table, including Plan. Allotments
+are exported as JSON. “No payment” means no plan; payment status
 does not affect the filter. All options start selected. Successful exports save
 the selection in this browser's local storage; Cancel discards changes. JSON
 export is no longer available.
