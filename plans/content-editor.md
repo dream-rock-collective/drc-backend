@@ -104,6 +104,24 @@ Handoff: [setup, env values, manual tests, and recovery](../docs/content-editor.
 
 ## Boundaries
 
+## Follow-up editor refinements: completed
+
+- Reduced font weights, removed resting button shadows, added symbolic rich-text
+  controls with accessible labels, segmented preview widths, and a subtle grid.
+- Publication now opens a native modal with field-level Before/After values,
+  including section order/contents, optional images, and additions/removals.
+  Cancel does not publish; confirmation uses the existing revision-safe flow.
+- Removed metadata/branding/planLabels from editable JSON, preserving fixed site
+  values. Join is displayed as Join Pane; Footer follows Page Sections.
+- Legacy browser drafts drop obsolete groups while retaining copy/revisions.
+- Backend: 41 tests, lint/typecheck/build passed; site: 13 tests, lint and normal/
+  preview builds passed. One compact mock-publisher browser check confirmed
+  modal Before/After, cancellation, exactly one confirmed request, field order,
+  accessible toolbar names, normal field weight, flat buttons, and grid. Desktop
+  and mobile had no horizontal overflow. No real publication was performed.
+
+## Boundaries
+
 Only initial-page conversion; other pages later use separate content documents.
 No image uploads, submodule, production publishing, or unrelated refactoring.
 Record subsequent integration and verification outcomes here.

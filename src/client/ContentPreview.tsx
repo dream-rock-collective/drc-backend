@@ -76,7 +76,7 @@ export function ContentPreview({ content, onUnauthenticated }: { content: Editor
   return <aside className="content-preview" aria-labelledby="preview-heading">
     <div className="preview-heading"><h2 id="preview-heading">Live preview</h2><button type="button" className="secondary" onClick={() => setAttempt((value) => value + 1)}>{buildError ? "Retry preview" : "Refresh preview"}</button></div>
     <p className="muted">Changes appear here before publishing. Registration and navigation are disabled.</p>
-    <div className="content-actions" role="group" aria-label="Preview width"><button type="button" className="secondary" aria-pressed={width === "desktop"} onClick={() => setWidth("desktop")}>Desktop</button><button type="button" className="secondary" aria-pressed={width === "mobile"} onClick={() => setWidth("mobile")}>Mobile</button></div>
+    <div className="preview-width" role="group" aria-label="Preview width"><button type="button" className="secondary" aria-pressed={width === "desktop"} onClick={() => setWidth("desktop")}>Desktop</button><button type="button" className="secondary" aria-pressed={width === "mobile"} onClick={() => setWidth("mobile")}>Mobile</button></div>
     {loading && <p role="status">Preparing the site preview…</p>}
     {buildError && <p className="form-error" role="alert">{buildError}</p>}
     {renderError && <p className="form-error" role="alert">{renderError} The last valid preview is preserved.</p>}

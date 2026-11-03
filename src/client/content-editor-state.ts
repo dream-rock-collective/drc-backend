@@ -25,7 +25,11 @@ export function parseSnapshot(value: unknown): ContentSnapshot {
 export function parseDraft(raw: string): ContentDraft {
   const value: unknown = JSON.parse(raw);
   if (!record(value) || typeof value["revision"] !== "string" || !/^[a-f0-9]{64}$/.test(value["revision"])) throw new Error("The saved draft is invalid");
-  return { revision: value["revision"], content: parseEditorContent(value["content"]) };
+  const content = parseEditorContent(value["content"]);
+  for (const key of ["metadata", "branding", "planLabels"]) delete content[key];
+  const member = content["member"];
+  if (record(member)) delete member["heading"];
+  return { revision: value["revision"], content };
 }
 export function replaceCopyField(content: EditorContent, path: string[], value: string): EditorContent {
   const next = structuredClone(content);
@@ -43,3 +47,28 @@ export function moveSection(sections: ContentSection[], from: number, to: number
   return next;
 }
 export const draftStorageKey = (snapshot: Pick<ContentSnapshot, "draftKey">): string => `dreamrock:content-draft:${snapshot.draftKey}`;
+
+export type ContentChange = { path: string[]; before: string | undefined; after: string | undefined };
+export function contentChanges(before: EditorContent, after: EditorContent): ContentChange[] {
+  const changes: ContentChange[] = [];
+  const visit = (previous: unknown, next: unknown, path: string[]) => {
+    if (previous === next) return;
+    if (Array.isArray(previous) || Array.isArray(next)) {
+      const oldItems: unknown[] = Array.isArray(previous) ? previous : [];
+      const newItems: unknown[] = Array.isArray(next) ? next : [];
+      for (let index = 0; index < Math.max(oldItems.length, newItems.length); index++) {
+        visit(oldItems[index], newItems[index], [...path, String(index)]);
+      }
+    } else if (record(previous) || record(next)) {
+      const oldFields = record(previous) ? previous : {};
+      const newFields = record(next) ? next : {};
+      for (const key of new Set([...Object.keys(oldFields), ...Object.keys(newFields)])) {
+        visit(oldFields[key], newFields[key], [...path, key]);
+      }
+    } else if (typeof previous === "string" || typeof next === "string") {
+      changes.push({ path, before: typeof previous === "string" ? previous : undefined, after: typeof next === "string" ? next : undefined });
+    }
+  };
+  visit(before, after, []);
+  return changes;
+}

@@ -37,6 +37,14 @@ export function normalizeRichText(html: string): string {
   return [...body.childNodes].map((node) => render(node)).join("");
 }
 
+const formattingActions = [
+  { label: "Bold", command: "bold", icon: <strong aria-hidden="true">B</strong> },
+  { label: "Italic", command: "italic", icon: <em aria-hidden="true">I</em> },
+  { label: "Bullets", command: "insertUnorderedList", icon: <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12" /><circle cx="3" cy="6" r="1" /><circle cx="3" cy="12" r="1" /><circle cx="3" cy="18" r="1" /></svg> },
+  { label: "Numbered list", command: "insertOrderedList", icon: <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10 6h11M10 12h11M10 18h11M3 3h1v5M2 11c0-3 5-3 4 0l-4 4h4M2 18h4l-2 2c4-1 3 4-2 2" /></svg> },
+  { label: "Paragraph", command: "formatBlock", icon: <span aria-hidden="true">¶</span> },
+];
+
 export function RichTextEditor({ label, value, onChange, disabled = false }: { label: string; value: string; onChange: (value: string) => void; disabled?: boolean }) {
   const id = useId();
   const editor = useRef<HTMLDivElement>(null);
@@ -58,15 +66,15 @@ export function RichTextEditor({ label, value, onChange, disabled = false }: { l
   return <div className="rich-editor">
     <span id={`${id}-label`} className="field-label">{label}</span>
     <div className="rich-toolbar" role="group" aria-label={`${label} formatting`}>
-      {[["Bold", "bold"], ["Italic", "italic"], ["Bullets", "insertUnorderedList"], ["Numbered list", "insertOrderedList"], ["Paragraph", "formatBlock"]].map(([text, action]) =>
-        <button key={action} type="button" className="secondary" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => command(action ?? "", action === "formatBlock" ? "p" : undefined)}>{text}</button>)}
-      <button type="button" className="secondary" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => {
+      {formattingActions.map((action) =>
+        <button key={action.command} type="button" className="secondary" aria-label={action.label} title={action.label} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => command(action.command, action.command === "formatBlock" ? "p" : undefined)}>{action.icon}</button>)}
+      <button type="button" className="secondary" aria-label="Link" title="Link" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => {
         const href = window.prompt("Link URL (https://, mailto:, /path, or #fragment)");
         if (href === null) return;
         if (!safeLink(href)) { window.alert("Enter an HTTP, mailto, relative-path, or fragment link."); return; }
         command("createLink", href);
-      }}>Link</button>
-      <button type="button" className="secondary" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => command("unlink")}>Remove link</button>
+      }}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m10 13 4-4M8 15l-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0M13 9l2-2a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0" /></svg></button>
+      <button type="button" className="secondary" aria-label="Remove link" title="Remove link" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => command("unlink")}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m3 3 18 18M8 15l-2 2a4 4 0 0 1-6-6l4-4M13 9l2-2a4 4 0 0 1 6 6l-3 3M9 13l2-2" /></svg></button>
     </div>
     <div ref={editor} className="rich-input" role="textbox" aria-multiline="true" aria-labelledby={`${id}-label`} contentEditable={!disabled} suppressContentEditableWarning onInput={update} onPaste={(event) => {
       event.preventDefault();

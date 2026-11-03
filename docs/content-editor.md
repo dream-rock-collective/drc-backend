@@ -5,6 +5,11 @@ registration-site checkout at `content/initial-page.json`. Images are selected
 from that checkout's existing `public/` assets. Uploads and other pages are not
 part of this release.
 
+Editable groups are Join Pane, Member, Messages, Page Sections, and Footer.
+Website metadata, logo labels/alt text, and membership plan labels stay fixed in
+the registration-site code. Existing browser drafts retain their editable text
+while obsolete groups are removed; stale revisions still require review.
+
 ## Local setup
 
 Keep the existing database, authentication, and Stripe settings in the backend
@@ -93,7 +98,9 @@ must match the admin browser origin for sign-in, publishing, and preview.
 3. Add a section, move it, choose an existing image, and edit its alt text.
    Remove a section and check its confirmation. Check the live preview at both
    widths before publishing; verify that preview form controls cannot submit.
-4. Publish in local mode and inspect the JSON diff and the running site. Confirm
+4. Choose Publish and review the Before/After values in the modal. Keep editing
+   cancels without writing; Confirm publish applies the changes. In local mode,
+   inspect the JSON diff and the running site. Confirm
    form request keys remain `name`, `email`, `address`, and `birthday`.
 5. Change the JSON outside the editor, then try publishing the old draft.
    Publication must stop and preserve the draft for review against newer copy.
@@ -115,7 +122,7 @@ The backend tests use temporary local repositories and bare remotes, without
 contacting GitHub. See `plans/content-editor.md` in each repository for recorded
 verification and remaining acceptance work.
 
-Verified for this change: 37 backend tests and 12 site tests; lint, type checks,
+Verified for this change: 41 backend tests and 13 site tests; lint, type checks,
 normal/preview builds; Docker image build and Git/SSH availability; real local
 sign-in, draft editing, local publication, and embedded live preview. Compact
 desktop/mobile browser checks passed. Production SSH access, branch permissions,
