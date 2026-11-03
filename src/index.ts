@@ -8,6 +8,7 @@ import { registrationsRoute } from "./routes/registrations";
 import { paymentsRoute } from "./routes/payments";
 import { allocationsRoute } from "./routes/allocations";
 import { siteContentRoute } from "./routes/site-content";
+import { sitePreviewRoute } from "./routes/site-preview";
 import { logger } from "./logger";
 
 const app = new Hono<{ Variables: SessionVariables }>();
@@ -44,11 +45,14 @@ app.use(
 app.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));
 app.use("/api/site-content", sessionMiddleware);
 app.use("/api/site-content/*", sessionMiddleware);
+app.use("/api/site-preview", sessionMiddleware);
+app.use("/api/site-preview/builds/:id/preview.html", sessionMiddleware);
 app.route("/", healthRoute);
 app.route("/", registrationsRoute);
 app.route("/", paymentsRoute);
 app.route("/", allocationsRoute);
 app.route("/", siteContentRoute);
+app.route("/", sitePreviewRoute);
 
 app.use(
   "/*",

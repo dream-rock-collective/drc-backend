@@ -66,13 +66,33 @@ for SSH publishing; local mode does not need the SSH overlay. Environment key
 paths are host paths for the overlay mounts. Its container paths are configured
 by the overlay. Run one publishing service per checkout.
 
+## Live preview
+
+Install the registration site's locked dependencies in the configured checkout
+before opening the editor. The backend builds its preview on first use and
+serves the result itself; a separate running Vite server is not required for the
+embedded preview. In Docker, install those dependencies in the container's
+mounted checkout:
+
+```sh
+docker compose exec backend sh -c 'cd /site && bun install --frozen-lockfile'
+```
+
+The editor updates the preview as you type without rebuilding for each edit.
+Use Desktop/Mobile to inspect widths, and Refresh preview after site code or
+assets change. Preview errors preserve the last valid rendered page. Registration,
+payment, and navigation actions are disabled in the iframe.
+No additional preview environment variables are required. `BETTER_AUTH_URL`
+must match the admin browser origin for sign-in, publishing, and preview.
+
 ## Manual acceptance checklist
 
 1. Open Registrations, choose Website editor, and confirm the displayed mode.
 2. Edit a join label and section body. Try bold, italic, links, and lists. Reload
    and confirm the browser restores the unpublished draft.
 3. Add a section, move it, choose an existing image, and edit its alt text.
-   Remove a section and check its confirmation.
+   Remove a section and check its confirmation. Check the live preview at both
+   widths before publishing; verify that preview form controls cannot submit.
 4. Publish in local mode and inspect the JSON diff and the running site. Confirm
    form request keys remain `name`, `email`, `address`, and `birthday`.
 5. Change the JSON outside the editor, then try publishing the old draft.
@@ -94,6 +114,13 @@ Registration site: `bun test`, `bun run lint`, and `bun run build`.
 The backend tests use temporary local repositories and bare remotes, without
 contacting GitHub. See `plans/content-editor.md` in each repository for recorded
 verification and remaining acceptance work.
+
+Verified for this change: 37 backend tests and 12 site tests; lint, type checks,
+normal/preview builds; Docker image build and Git/SSH availability; real local
+sign-in, draft editing, local publication, and embedded live preview. Compact
+desktop/mobile browser checks passed. Production SSH access, branch permissions,
+and GitHub Pages deployment must be checked with your configured deployment;
+they were not exercised against the live repository.
 
 `compose.editor-test.yml` provides an isolated temporary database for real auth
 checks; the backend README documents its migration and seeding commands. Do not

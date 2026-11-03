@@ -181,6 +181,29 @@ from an API request.
 
 Run content-boundary tests with `bun test tests/site-content.test.ts`.
 
+### Live preview
+
+Install the registration site's locked dependencies in `SITE_CHECKOUT_PATH`
+with `bun install --frozen-lockfile`. The backend runs that checkout's Vite
+preview build; it never installs dependencies automatically. The editor requests
+`GET /api/site-preview` with its administrator session and receives an isolated
+iframe URL and a frame token. Use the editor's refresh control after changing
+site code or images. Source/configuration/assets are fingerprinted and unchanged
+builds are reused; typing sends browser messages without rebuilding.
+
+The preview uses the site's real renderer and CSS, with registration and payment
+actions disabled and no member-storage initialization. Its iframe permits
+scripts without same-origin access. HTML requires authentication; only
+allowlisted generated JS, CSS, fonts, and images are served anonymously with
+CORS so the opaque iframe can load them. CSP forbids connections, form
+submissions, and embedding by other origins. Frame messages check parent/frame
+identity, origin, and token. Preview builds live under the backend's temporary
+directory; only the last three distinct source builds are retained.
+
+See [the content editor guide](docs/content-editor.md) for the complete editing
+and publishing workflow. Verify preview hosting with
+`bun test tests/site-preview.test.ts`.
+
 
 For authenticated editor browser verification, `compose.editor-test.yml` defines
 an isolated PostgreSQL service with temporary in-memory storage. Start it with
