@@ -87,6 +87,32 @@ for (const width of [1280, 390]) {
       preview.getByRole("heading", { name: "Mail Drops", exact: true }),
     ).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("page-selector.png") });
+    for (const name of ["Join Pane", "Member Pane", "Messages", "Footer"]) {
+      const panel = page
+        .locator("details.content-panel")
+        .filter({ has: page.getByText(name, { exact: true }) });
+      const heading = panel.locator("summary");
+      await heading.click();
+      await expect(heading).toHaveCSS("position", "sticky");
+      if (name !== "Footer") {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await heading.evaluate((element) =>
+          window.scrollTo(
+            0,
+            window.scrollY + element.getBoundingClientRect().top + 30,
+          ),
+        );
+        await expect
+          .poll(() =>
+            heading.evaluate((element) =>
+              Math.round(element.getBoundingClientRect().top),
+            ),
+          )
+          .toBe(0);
+      }
+      await heading.click();
+    }
+
     for (const selected of ["main", "subscriptions", "donations"]) {
       await selectPage.selectOption(selected);
       await page.evaluate(() => window.scrollTo(0, 0));

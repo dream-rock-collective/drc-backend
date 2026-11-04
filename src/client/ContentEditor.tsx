@@ -330,7 +330,21 @@ export function ContentEditor({
       <header className="page-header">
         <div>
           <p className="eyebrow">Dream Rock Collective</p>
-          <h1>Website editor</h1>
+          <div className="content-title-row">
+            <h1>Website editor</h1>
+            <select
+              id="editor-page"
+              aria-label="Page"
+              value={page}
+              disabled={!content}
+              onChange={(event) => setPage(event.target.value as EditablePage)}
+            >
+              <option value="main">Main</option>
+              <option value="subscriptions">Subscriptions</option>
+              <option value="donations">Donations</option>
+              <option value="success">Success</option>
+            </select>
+          </div>
           <p>
             Edit website pages. Drafts stay in this browser until published.
           </p>
@@ -352,20 +366,6 @@ export function ContentEditor({
           </button>
         </div>
       </header>
-      <section className="content-page-picker" aria-label="Page selection">
-        <label htmlFor="editor-page">Page</label>
-        <select
-          id="editor-page"
-          value={page}
-          disabled={!content}
-          onChange={(event) => setPage(event.target.value as EditablePage)}
-        >
-          <option value="main">Main</option>
-          <option value="subscriptions">Subscriptions</option>
-          <option value="donations">Donations</option>
-          <option value="success">Success</option>
-        </select>
-      </section>
       {error && (
         <p className="form-error" role="alert">
           {error}
