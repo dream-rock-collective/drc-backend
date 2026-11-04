@@ -210,6 +210,13 @@ Section images must exist as regular files under `public/`; symlinks and paths
 outside that directory are excluded. No arbitrary filesystem path is accepted
 from an API request.
 
+Content-boundary and preview tests require a sibling `../registration-site`
+checkout with the matching editor/preview code. Install its dependencies using
+`bun install --frozen-lockfile` from that checkout before running the tests.
+CI checks out a pinned registration-site revision beside the backend and installs
+both repositories' locked dependencies. Update the workflow's fixture revision
+when changing the shared content/preview contract.
+
 Run content-boundary tests with `bun test tests/site-content.test.ts`.
 
 ### Live preview
