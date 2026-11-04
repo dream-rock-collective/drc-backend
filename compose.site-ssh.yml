@@ -1,0 +1,9 @@
+# Use with: docker compose -f docker-compose.yml -f compose.site-ssh.yml up -d --build
+services:
+  backend:
+    environment:
+      SITE_DEPLOY_KEY_PATH: /run/site-ssh/deploy-key
+      SITE_KNOWN_HOSTS_PATH: /run/site-ssh/known-hosts
+    volumes:
+      - ${SITE_DEPLOY_KEY_PATH:?Set SITE_DEPLOY_KEY_PATH}:/run/site-ssh/deploy-key:ro
+      - ${SITE_KNOWN_HOSTS_PATH:?Set SITE_KNOWN_HOSTS_PATH}:/run/site-ssh/known-hosts:ro

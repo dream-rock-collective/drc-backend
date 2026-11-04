@@ -5,6 +5,12 @@ services:
     ports:
       - "6942:6942"
     environment:
+      SITE_PUBLISH_MODE: ${SITE_PUBLISH_MODE:-local}
+      SITE_CHECKOUT_PATH: /site
+      SITE_REPOSITORY: ${SITE_REPOSITORY:-}
+      SITE_PUBLISH_BRANCH: ${SITE_PUBLISH_BRANCH:-main}
+      SITE_GIT_NAME: ${SITE_GIT_NAME:-Dream Rock Editor}
+      SITE_GIT_EMAIL: ${SITE_GIT_EMAIL:-}
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REGISTRATION_SITE_ORIGIN: ${REGISTRATION_SITE_ORIGIN:-https://dreamrock.co}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
@@ -16,6 +22,8 @@ services:
       STRIPE_PRICE_ONCE: ${STRIPE_PRICE_ONCE}
       STRIPE_PRICE_MONTHLY: ${STRIPE_PRICE_MONTHLY}
       STRIPE_PRICE_YEARLY: ${STRIPE_PRICE_YEARLY}
+    volumes:
+      - ${SITE_CHECKOUT_PATH:-../registration-site}:/site
     depends_on:
       postgres:
         condition: service_healthy

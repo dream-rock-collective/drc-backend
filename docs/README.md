@@ -8,6 +8,7 @@ current contracts or engineering standards.
 | Task | Reference |
 | --- | --- |
 | Setup, deployment, migrations, current API/admin overview | [Repository README](../README.md) |
+| Website editor setup, publishing, preview, acceptance, and recovery | [Content editor handoff](content-editor.md) |
 | TypeScript, React props, validation, module boundaries | [TypeScript](typescript.md) |
 | Work in chunks, select checks, resume a multi-step task | [Development workflow](development-workflow.md) |
 | Public registration and checkout API details | [Registration-site API](registration-site-api.md) |
