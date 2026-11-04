@@ -3,10 +3,13 @@ import { contentChanges, type EditorContent } from "./content-editor-state";
 import { normalizeRichText } from "./RichTextEditor";
 
 function changeLabel(path: string[]): string {
-  const parts =
-    path[0] === "sections"
-      ? [`Section ${Number(path[1]) + 1}`, ...path.slice(2)]
-      : path;
+  const parts = path.flatMap((part, index) =>
+    part === "sections" && path[index + 1] !== undefined
+      ? [`Section ${Number(path[index + 1]) + 1}`]
+      : index > 0 && path[index - 1] === "sections"
+        ? []
+        : [part],
+  );
   return parts
     .map((part) =>
       part === "join"

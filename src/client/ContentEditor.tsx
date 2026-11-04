@@ -12,6 +12,8 @@ import {
   type ContentSnapshot,
   type CopyFields,
   type EditorContent,
+  type EditablePage,
+  type SectionPage,
 } from "./content-editor-state";
 
 class ContentRequestError extends Error {
@@ -59,6 +61,7 @@ export function ContentEditor({
 }: {
   onUnauthenticated: () => void;
 }) {
+  const [page, setPage] = useState<EditablePage>("main");
   const [snapshot, setSnapshot] = useState<ContentSnapshot | null>(null);
   const [content, setContent] = useState<EditorContent | null>(null);
   const [revision, setRevision] = useState("");
@@ -102,7 +105,7 @@ export function ContentEditor({
           const raw = localStorage.getItem(draftStorageKey(fresh));
           if (raw) {
             const draft = parseDraft(raw);
-            setContent(draft.content);
+            setContent({ ...fresh.content, ...draft.content });
             setRevision(draft.revision);
             setNotice("Restored your unpublished browser draft.");
           }
@@ -261,7 +264,10 @@ export function ContentEditor({
             {copyFields(value, nextPath)}
           </fieldset>
         );
-      if (nextPath.join(".") === "member.helpBody")
+      if (
+        nextPath.join(".") === "member.helpBody" ||
+        nextPath.at(-1) === "body"
+      )
         return (
           <RichTextEditor
             key={key}
@@ -303,10 +309,21 @@ export function ContentEditor({
     <details className="content-panel" key={key}>
       <summary>{label([key])}</summary>
       <div className="content-copy-fields">
-        {!Array.isArray(fields) && copyFields(fields, [key])}
+        {!Array.isArray(fields) && copyFields(fields as CopyFields, [key])}
       </div>
     </details>
   );
+
+  const selectedContent = !content
+    ? { sections: [] }
+    : page === "main"
+      ? content
+      : (content[page] as SectionPage);
+  const setPageContent = (next: EditorContent | SectionPage) => {
+    if (!content) return;
+    if (page === "main") setContent(next as EditorContent);
+    else setContent({ ...content, [page]: next as SectionPage });
+  };
 
   return (
     <main className="page-shell content-editor-shell">
@@ -315,8 +332,7 @@ export function ContentEditor({
           <p className="eyebrow">Dream Rock Collective</p>
           <h1>Website editor</h1>
           <p>
-            Edit the initial registration page. Drafts stay in this browser
-            until published.
+            Edit website pages. Drafts stay in this browser until published.
           </p>
         </div>
         <div className="toolbar content-toolbar">
@@ -460,192 +476,275 @@ export function ContentEditor({
           )}
           <div className="content-editor-layout">
             <div className="content-fields">
-              {Object.entries(content)
-                .filter(([key]) => key !== "sections" && key !== "footer")
-                .map(copyPanel)}
-              <section
-                className="content-panel"
-                aria-labelledby="sections-heading"
+              <label htmlFor="editor-page">Page</label>
+              <select
+                id="editor-page"
+                value={page}
+                onChange={(event) =>
+                  setPage(event.target.value as EditablePage)
+                }
               >
-                <div className="section-editor-heading">
-                  <h2 id="sections-heading">Page sections</h2>
-                  <button
-                    type="button"
-                    disabled={
-                      busy ||
-                      invalidDraft ||
-                      snapshot.pending ||
-                      content.sections.length >= 100
-                    }
-                    onClick={() =>
-                      setContent({
-                        ...content,
-                        sections: [
-                          ...content.sections,
-                          { title: "New section", body: "<p></p>" },
-                        ],
-                      })
-                    }
-                  >
-                    Add section
-                  </button>
-                </div>
-                {content.sections.map((section, index) => (
-                  <fieldset
-                    className="section-editor"
-                    key={index}
-                    disabled={busy || invalidDraft || snapshot.pending}
-                  >
-                    <legend>Section {index + 1}</legend>
-                    <div className="content-actions">
-                      <button
-                        type="button"
-                        className="secondary"
-                        disabled={index === 0}
-                        aria-label={`Move section ${index + 1} up`}
-                        onClick={() =>
-                          setContent({
-                            ...content,
-                            sections: moveSection(
-                              content.sections,
-                              index,
-                              index - 1,
-                            ),
-                          })
-                        }
-                      >
-                        Move up
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary"
-                        disabled={index === content.sections.length - 1}
-                        aria-label={`Move section ${index + 1} down`}
-                        onClick={() =>
-                          setContent({
-                            ...content,
-                            sections: moveSection(
-                              content.sections,
-                              index,
-                              index + 1,
-                            ),
-                          })
-                        }
-                      >
-                        Move down
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary"
-                        aria-label={`Remove section ${index + 1}`}
-                        onClick={() => {
-                          if (window.confirm(`Remove section ${index + 1}?`))
-                            setContent({
-                              ...content,
-                              sections: content.sections.filter(
-                                (_, position) => position !== index,
-                              ),
-                            });
-                        }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <label>
-                      Section {index + 1} title
-                      <input
-                        value={section.title}
-                        maxLength={500}
-                        onChange={(event) =>
-                          setContent({
-                            ...content,
-                            sections: content.sections.map((item, position) =>
-                              position === index
-                                ? { ...item, title: event.target.value }
-                                : item,
-                            ),
-                          })
-                        }
-                      />
-                    </label>
-                    <RichTextEditor
-                      label={`Section ${index + 1} body`}
-                      value={section.body}
-                      disabled={busy || invalidDraft || snapshot.pending}
-                      onChange={(body) =>
-                        setContent({
-                          ...content,
-                          sections: content.sections.map((item, position) =>
-                            position === index ? { ...item, body } : item,
-                          ),
+                <option value="main">Main</option>
+                <option value="subscriptions">Subscriptions</option>
+                <option value="donations">Donations</option>
+                <option value="success">Success</option>
+              </select>
+              {page === "main"
+                ? Object.entries(content)
+                    .filter(
+                      ([key]) =>
+                        ![
+                          "sections",
+                          "footer",
+                          "subscriptions",
+                          "donations",
+                          "success",
+                        ].includes(key),
+                    )
+                    .map(copyPanel)
+                : copyFields(
+                    page === "success"
+                      ? (content["success"] as CopyFields)
+                      : {
+                          title: (content[page] as SectionPage).title,
+                          body: (content[page] as SectionPage).body,
+                        },
+                    [page],
+                  )}
+              {page === "donations" && (
+                <p className="muted">
+                  Keys identify charities in future dollar allocations. Changing
+                  a key does not rename historical records.
+                </p>
+              )}
+              {page !== "success" && (
+                <section
+                  className="content-panel"
+                  aria-labelledby="sections-heading"
+                >
+                  <div className="section-editor-heading">
+                    <h2 id="sections-heading">Page sections</h2>
+                    <button
+                      type="button"
+                      disabled={
+                        busy ||
+                        invalidDraft ||
+                        snapshot.pending ||
+                        selectedContent.sections.length >= 100
+                      }
+                      onClick={() =>
+                        setPageContent({
+                          ...selectedContent,
+                          sections: [
+                            ...selectedContent.sections,
+                            {
+                              title: "New section",
+                              body: "<p></p>",
+                              ...(page === "donations"
+                                ? { key: "", url: "" }
+                                : {}),
+                            },
+                          ],
                         })
                       }
-                    />
-                    <label>
-                      Section {index + 1} image
-                      <select
-                        value={section.image?.src ?? ""}
-                        onChange={(event) =>
-                          setContent({
-                            ...content,
-                            sections: content.sections.map((item, position) => {
-                              if (position !== index) return item;
-                              if (event.target.value)
-                                return {
-                                  ...item,
-                                  image: {
-                                    src: event.target.value,
-                                    alt: item.image?.alt ?? "",
-                                  },
-                                };
-                              const { image: _image, ...withoutImage } = item;
-                              return withoutImage;
-                            }),
-                          })
-                        }
-                      >
-                        <option value="">No image</option>
-                        {images.map((src) => (
-                          <option key={src} value={src}>
-                            {src}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    {section.image && (
+                    >
+                      Add section
+                    </button>
+                  </div>
+                  {selectedContent.sections.map((section, index) => (
+                    <fieldset
+                      className="section-editor"
+                      key={index}
+                      disabled={busy || invalidDraft || snapshot.pending}
+                    >
+                      <legend>Section {index + 1}</legend>
+                      <div className="content-actions">
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={index === 0}
+                          aria-label={`Move section ${index + 1} up`}
+                          onClick={() =>
+                            setPageContent({
+                              ...selectedContent,
+                              sections: moveSection(
+                                selectedContent.sections,
+                                index,
+                                index - 1,
+                              ),
+                            })
+                          }
+                        >
+                          Move up
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={
+                            index === selectedContent.sections.length - 1
+                          }
+                          aria-label={`Move section ${index + 1} down`}
+                          onClick={() =>
+                            setPageContent({
+                              ...selectedContent,
+                              sections: moveSection(
+                                selectedContent.sections,
+                                index,
+                                index + 1,
+                              ),
+                            })
+                          }
+                        >
+                          Move down
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={
+                            page === "donations" &&
+                            selectedContent.sections.length <= 1
+                          }
+                          aria-label={`Remove section ${index + 1}`}
+                          onClick={() => {
+                            if (window.confirm(`Remove section ${index + 1}?`))
+                              setPageContent({
+                                ...selectedContent,
+                                sections: selectedContent.sections.filter(
+                                  (_, position) => position !== index,
+                                ),
+                              });
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
                       <label>
-                        Section {index + 1} image alt text
+                        Section {index + 1} title
                         <input
-                          value={section.image.alt}
+                          value={section.title}
+                          maxLength={500}
                           onChange={(event) =>
-                            setContent({
-                              ...content,
-                              sections: content.sections.map(
+                            setPageContent({
+                              ...selectedContent,
+                              sections: selectedContent.sections.map(
                                 (item, position) =>
-                                  position === index && item.image
-                                    ? {
-                                        ...item,
-                                        image: {
-                                          ...item.image,
-                                          alt: event.target.value,
-                                        },
-                                      }
+                                  position === index
+                                    ? { ...item, title: event.target.value }
                                     : item,
                               ),
                             })
                           }
                         />
                       </label>
-                    )}
-                  </fieldset>
-                ))}
-              </section>
-              {Object.entries(content)
-                .filter(([key]) => key === "footer")
-                .map(copyPanel)}
+                      {page === "donations" &&
+                        (["key", "url"] as const).map((field) => (
+                          <label key={field}>
+                            Section {index + 1}{" "}
+                            {field === "key" ? "charity key" : "URL"}
+                            <input
+                              value={section[field] ?? ""}
+                              onChange={(event) =>
+                                setPageContent({
+                                  ...selectedContent,
+                                  sections: selectedContent.sections.map(
+                                    (item, position) =>
+                                      position === index
+                                        ? {
+                                            ...item,
+                                            [field]: event.target.value,
+                                          }
+                                        : item,
+                                  ),
+                                })
+                              }
+                            />
+                          </label>
+                        ))}
+                      <RichTextEditor
+                        label={`Section ${index + 1} body`}
+                        value={section.body}
+                        disabled={busy || invalidDraft || snapshot.pending}
+                        onChange={(body) =>
+                          setPageContent({
+                            ...selectedContent,
+                            sections: selectedContent.sections.map(
+                              (item, position) =>
+                                position === index ? { ...item, body } : item,
+                            ),
+                          })
+                        }
+                      />
+                      <label>
+                        Section {index + 1} image
+                        <select
+                          value={section.image?.src ?? ""}
+                          onChange={(event) =>
+                            setPageContent({
+                              ...selectedContent,
+                              sections: selectedContent.sections.map(
+                                (item, position) => {
+                                  if (position !== index) return item;
+                                  if (event.target.value)
+                                    return {
+                                      ...item,
+                                      image: {
+                                        src: event.target.value,
+                                        alt: item.image?.alt ?? "",
+                                      },
+                                    };
+                                  const { image: _image, ...withoutImage } =
+                                    item;
+                                  return withoutImage;
+                                },
+                              ),
+                            })
+                          }
+                        >
+                          <option value="">No image</option>
+                          {images.map((src) => (
+                            <option key={src} value={src}>
+                              {src}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {section.image && (
+                        <label>
+                          Section {index + 1} image alt text
+                          <input
+                            value={section.image.alt}
+                            onChange={(event) =>
+                              setPageContent({
+                                ...selectedContent,
+                                sections: selectedContent.sections.map(
+                                  (item, position) =>
+                                    position === index && item.image
+                                      ? {
+                                          ...item,
+                                          image: {
+                                            ...item.image,
+                                            alt: event.target.value,
+                                          },
+                                        }
+                                      : item,
+                                ),
+                              })
+                            }
+                          />
+                        </label>
+                      )}
+                    </fieldset>
+                  ))}
+                </section>
+              )}
+              {page === "main" &&
+                Object.entries(content)
+                  .filter(([key]) => key === "footer")
+                  .map(copyPanel)}
             </div>
             <ContentPreview
               content={content}
+              page={page}
               onUnauthenticated={onUnauthenticated}
             />
           </div>

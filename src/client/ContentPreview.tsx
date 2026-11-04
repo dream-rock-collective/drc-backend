@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { EditorContent } from "./content-editor-state";
+import type { EditorContent, EditablePage } from "./content-editor-state";
 
 type PreviewDestination = { url: string; token: string };
 export function parsePreviewDestination(
@@ -43,9 +43,11 @@ export function isPreviewMessage(
 
 export function ContentPreview({
   content,
+  page = "main",
   onUnauthenticated,
 }: {
   content: EditorContent;
+  page?: EditablePage;
   onUnauthenticated: () => void;
 }) {
   const [destination, setDestination] = useState<PreviewDestination | null>(
@@ -60,6 +62,8 @@ export function ContentPreview({
   const ready = useRef(false);
   const latestContent = useRef(content);
   latestContent.current = content;
+  const latestPage = useRef(page);
+  latestPage.current = page;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -132,6 +136,7 @@ export function ContentPreview({
             type: "drc-preview-content",
             token: destination.token,
             content: latestContent.current,
+            page: latestPage.current,
           },
           "*",
         );
@@ -150,10 +155,15 @@ export function ContentPreview({
   useEffect(() => {
     if (destination && ready.current)
       frame.current?.contentWindow?.postMessage(
-        { type: "drc-preview-content", token: destination.token, content },
+        {
+          type: "drc-preview-content",
+          token: destination.token,
+          content,
+          page,
+        },
         "*",
       );
-  }, [content, destination]);
+  }, [content, page, destination]);
 
   return (
     <aside className="content-preview" aria-labelledby="preview-heading">
@@ -207,7 +217,7 @@ export function ContentPreview({
           <iframe
             key={destination.token}
             ref={frame}
-            title="Registration page preview"
+            title="Website page preview"
             src={destination.url}
             sandbox="allow-scripts"
             referrerPolicy="no-referrer"

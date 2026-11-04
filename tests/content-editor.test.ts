@@ -169,3 +169,59 @@ test("link controls reject executable and obfuscated destinations", () => {
   ])
     expect(safeLink(url)).toBe(true);
 });
+
+test("nested page drafts retain ordered charity fields and review changes", () => {
+  const pages = {
+    ...content,
+    subscriptions: {
+      title: "Subscriptions",
+      body: "<p>Intro</p>",
+      sections: content.sections,
+    },
+    donations: {
+      title: "Donate",
+      body: "<p>Choose</p>",
+      sections: [
+        {
+          key: "first",
+          title: "First Charity",
+          url: "https://example.test",
+          body: "<p>Work</p>",
+        },
+        {
+          key: "second",
+          title: "Second Charity",
+          url: "https://example.test/second",
+          body: "<p>More</p>",
+        },
+      ],
+    },
+    success: { title: "Thanks!" },
+  };
+  const restored = parseDraft(JSON.stringify({ revision, content: pages }));
+  expect(restored.content).toEqual(pages);
+  const updated = replaceCopyField(
+    restored.content,
+    ["donations", "title"],
+    "Give locally",
+  );
+  expect(updated["subscriptions"]).toEqual(pages.subscriptions);
+  const reordered = {
+    ...pages,
+    donations: {
+      ...pages.donations,
+      sections: moveSection(pages.donations.sections, 1, 0),
+    },
+  };
+  expect(contentChanges(pages, reordered)).toContainEqual({
+    path: ["donations", "sections", "0", "key"],
+    before: "first",
+    after: "second",
+  });
+  expect(() =>
+    parseEditorContent({
+      ...pages,
+      donations: { ...pages.donations, sections: [{ title: "Bad", body: 3 }] },
+    }),
+  ).toThrow();
+});
