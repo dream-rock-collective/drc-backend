@@ -29,3 +29,7 @@ implementation references.
   and verification notes; not a current task or API contract.
 - [Fresh-start commands](fresh-start.md): destructive database-volume reset notes,
   not the normal setup procedure. Use the repository README for normal setup.
+
+## Proposed features
+
+See the [feature plan index](plans/active/README.md) for separate implementation branches, paired PRs, dependencies and acceptance criteria. These plans do not describe shipped behavior.
