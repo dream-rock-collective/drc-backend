@@ -7,7 +7,8 @@ Images come from that checkout's existing `public/` assets; uploads are excluded
 
 Main keeps its existing Join Pane, Member Pane, Messages, Page Sections, and
 Footer controls. Subscriptions exposes a title, rich-text introduction, and an
-ordered list of title/body/optional-image sections. Donations exposes a title,
+ordered list of title/body/optional-image sections, plus plain-text labels for
+One Time, Monthly, and Yearly. These labels do not change checkout plan IDs or prices. Donations exposes a title,
 rich-text introduction, and ordered charity sections containing editable `key`,
 `title`, `url`, rich-text `body`, and optional `image: { src, alt }`. Success
 exposes only its heading. Sections can be added, removed, and moved up/down;
@@ -18,11 +19,11 @@ The charity array drives both allocation columns and descriptions. Keys become
 properties in the existing dollar allocation payload; renaming a key affects
 future submissions, not historical records. Saved browser allocations containing
 removed/renamed keys must be allocated again. Budgets, payment settings, prices,
-plan labels, operational messages, decorations, and metadata remain code-owned.
+other plan labels, operational messages, decorations, and metadata remain code-owned.
 The percentage API migration is deliberately excluded.
 
 The existing root fields stay unchanged. New sibling objects are
-`subscriptions: { title, body, sections }`,
+`subscriptions: { title, body, planLabels: { once, monthly, yearly }, sections }`,
 `donations: { title, body, sections }`, and `success: { title }`.
 Old documents receive defaults for missing page objects. Deploy the matching
 registration-site validator/renderers in the publisher checkout before the new

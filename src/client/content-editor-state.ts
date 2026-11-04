@@ -10,6 +10,7 @@ export type SectionPage = {
   title: string;
   body: string;
   sections: ContentSection[];
+  planLabels?: Record<"once" | "monthly" | "yearly", string>;
 };
 export type EditablePage = "main" | "subscriptions" | "donations" | "success";
 export type EditorContent = {
@@ -58,12 +59,19 @@ export function parseEditorContent(value: unknown): EditorContent {
     !validSections(value["sections"]) ||
     Object.entries(value).some(([key, item]) => {
       if (key === "sections") return false;
+      const planLabels = record(item) ? item["planLabels"] : undefined;
       if (key === "subscriptions" || key === "donations")
         return (
           !record(item) ||
           typeof item["title"] !== "string" ||
           typeof item["body"] !== "string" ||
-          !validSections(item["sections"])
+          !validSections(item["sections"]) ||
+          (key === "subscriptions" &&
+            planLabels !== undefined &&
+            (!record(planLabels) ||
+              ["once", "monthly", "yearly"].some(
+                (plan) => typeof planLabels[plan] !== "string",
+              )))
         );
       return !textFields(item);
     })

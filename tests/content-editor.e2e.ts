@@ -202,6 +202,28 @@ for (const width of [1280, 390]) {
       .getByRole("textbox", { name: "Subscriptions / Title", exact: true })
       .fill("Choose your mail");
     await page
+      .getByRole("textbox", {
+        name: "Subscriptions / Plan Labels / Once",
+        exact: true,
+      })
+      .fill("Single letter");
+    await page
+      .getByRole("textbox", {
+        name: "Subscriptions / Plan Labels / Monthly",
+        exact: true,
+      })
+      .fill("Every month");
+    await page
+      .getByRole("textbox", {
+        name: "Subscriptions / Plan Labels / Yearly",
+        exact: true,
+      })
+      .fill("A full year");
+    await expect(preview.locator('[data-plan="monthly"]')).toHaveText(
+      "Every month$10/mo→",
+    );
+
+    await page
       .getByRole("button", { name: "Add section", exact: true })
       .click();
     await page
@@ -248,11 +270,37 @@ for (const width of [1280, 390]) {
       "otayMesaDetentionResistance",
     ]);
     expect(content.subscriptions.sections).toHaveLength(2);
+    expect(content.subscriptions.planLabels).toEqual({
+      once: "Single letter",
+      monthly: "Every month",
+      yearly: "A full year",
+    });
     expect(content.success.title).toBe("Thank you, friend!");
     await page.reload();
     await expect(
       page.getByText("No unpublished changes", { exact: true }),
     ).toBeVisible();
+    const { planLabels: _labels, ...legacySubscriptions } =
+      content.subscriptions;
+    await page.evaluate(
+      (draft) =>
+        localStorage.setItem(
+          "dreamrock:content-draft:test-editor",
+          JSON.stringify(draft),
+        ),
+      {
+        revision,
+        content: { ...content, subscriptions: legacySubscriptions },
+      },
+    );
+    await page.reload();
+    await selectPage.selectOption("subscriptions");
+    await expect(
+      page.getByRole("textbox", {
+        name: "Subscriptions / Plan Labels / Yearly",
+        exact: true,
+      }),
+    ).toHaveValue("A full year");
     await selectPage.selectOption("donations");
     await page
       .getByRole("button", { name: "Remove section 3", exact: true })

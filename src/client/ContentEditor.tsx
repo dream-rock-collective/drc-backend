@@ -105,7 +105,16 @@ export function ContentEditor({
           const raw = localStorage.getItem(draftStorageKey(fresh));
           if (raw) {
             const draft = parseDraft(raw);
-            setContent({ ...fresh.content, ...draft.content });
+            const restored = { ...fresh.content, ...draft.content };
+            if (
+              fresh.content["subscriptions"] &&
+              draft.content["subscriptions"]
+            )
+              restored["subscriptions"] = {
+                ...(fresh.content["subscriptions"] as SectionPage),
+                ...(draft.content["subscriptions"] as SectionPage),
+              };
+            setContent(restored);
             setRevision(draft.revision);
             setNotice("Restored your unpublished browser draft.");
           }
@@ -314,6 +323,8 @@ export function ContentEditor({
     </details>
   );
 
+  const planLabels = (content?.["subscriptions"] as SectionPage | undefined)
+    ?.planLabels;
   const selectedContent = !content
     ? { sections: [] }
     : page === "main"
@@ -525,6 +536,9 @@ export function ContentEditor({
                       {
                         title: (content[page] as SectionPage).title,
                         body: (content[page] as SectionPage).body,
+                        ...(page === "subscriptions" && planLabels
+                          ? { planLabels }
+                          : {}),
                       },
                       [page],
                     )}
