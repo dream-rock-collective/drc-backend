@@ -58,7 +58,9 @@ copying them into plans. Historical plans do not override current guidance.
 
 Run commands from this repository. For TypeScript changes use `bun run typecheck`;
 for admin UI integration use `bun run build`. `bun run lint` checks CSS and types;
-there is no general TypeScript formatter script. Follow surrounding formatting.
+`bun run format <file>` formats files with Prettier. Enable the pre-commit hook
+with `bun run setup-hooks`; it formats and re-stages staged files, rejects
+partially staged files, and runs lint.
 Use focused tests or a small assert-based check for new non-trivial logic.
 Run `bun run test` for all Bun unit tests and `bun run test:e2e` for the
 Playwright browser tests. Browser tests start their own frontend server and

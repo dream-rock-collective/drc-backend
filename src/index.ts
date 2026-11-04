@@ -7,54 +7,38 @@ import { healthRoute } from "./routes/health";
 import { registrationsRoute } from "./routes/registrations";
 import { paymentsRoute } from "./routes/payments";
 import { allocationsRoute } from "./routes/allocations";
+import { siteContentRoute } from "./routes/site-content";
+import { sitePreviewRoute } from "./routes/site-preview";
 import { logger } from "./logger";
 
 const app = new Hono<{ Variables: SessionVariables }>();
-const configuredRegistrationSiteOrigin = process.env["REGISTRATION_SITE_ORIGIN"]?.trim();
+const configuredRegistrationSiteOrigin =
+  process.env["REGISTRATION_SITE_ORIGIN"]?.trim();
 
 const publicCors = cors({
   origin: configuredRegistrationSiteOrigin || "http://localhost:5173",
 });
 
-app.use(
-  "/register",
-  publicCors,
-);
-app.use(
-  "/health",
-  publicCors,
-);
-app.use(
-  "/create-checkout-session",
-  publicCors,
-);
-app.use(
-  "/submit-allocation",
-  publicCors,
-);
-app.use(
-  "/registrations",
-  sessionMiddleware,
-);
-app.use(
-  "/modify-registration",
-  sessionMiddleware,
-);
+app.use("/register", publicCors);
+app.use("/health", publicCors);
+app.use("/create-checkout-session", publicCors);
+app.use("/submit-allocation", publicCors);
+app.use("/registrations", sessionMiddleware);
+app.use("/modify-registration", sessionMiddleware);
 app.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));
+app.use("/api/site-content", sessionMiddleware);
+app.use("/api/site-content/*", sessionMiddleware);
+app.use("/api/site-preview", sessionMiddleware);
+app.use("/api/site-preview/builds/:id/preview.html", sessionMiddleware);
 app.route("/", healthRoute);
 app.route("/", registrationsRoute);
 app.route("/", paymentsRoute);
 app.route("/", allocationsRoute);
+app.route("/", siteContentRoute);
+app.route("/", sitePreviewRoute);
 
-app.use(
-  "/*",
-  serveStatic({ root: "./dist" }),
-);
-app.get(
-  "*",
-  serveStatic({ path: "./dist/index.html" }),
-);
-
+app.use("/*", serveStatic({ root: "./dist" }));
+app.get("*", serveStatic({ path: "./dist/index.html" }));
 
 const port = Number(process.env["PORT"] ?? "6942");
 
