@@ -24,6 +24,7 @@ app.use("/health", publicCors);
 app.use("/create-checkout-session", publicCors);
 app.use("/submit-allocation", publicCors);
 app.use("/registrations", sessionMiddleware);
+app.use("/registrations/:id/allocations", sessionMiddleware);
 app.use("/modify-registration", sessionMiddleware);
 app.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));
 app.use("/api/site-content", sessionMiddleware);

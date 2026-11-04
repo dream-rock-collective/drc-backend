@@ -25,7 +25,7 @@ export const exportColumns = [
 
 export type ExportSelection = {
   plans: Registration["plan"][];
-  columns: Array<typeof exportColumns[number]["value"]>;
+  columns: Array<(typeof exportColumns)[number]["value"]>;
 };
 
 export const defaultExportSelection = (): ExportSelection => ({
@@ -33,22 +33,41 @@ export const defaultExportSelection = (): ExportSelection => ({
   columns: exportColumns.map(({ value }) => value),
 });
 
-export const parseExportSelection = (stored: string | null): ExportSelection => {
+export const parseExportSelection = (
+  stored: string | null,
+): ExportSelection => {
   try {
     const parsed: unknown = JSON.parse(stored ?? "null");
-    if (!parsed || typeof parsed !== "object" || !("plans" in parsed) || !("columns" in parsed)) {
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("plans" in parsed) ||
+      !("columns" in parsed)
+    ) {
       return defaultExportSelection();
     }
     const { plans, columns } = parsed;
-    if (!Array.isArray(plans) || !Array.isArray(columns)
-      || !plans.length || !columns.length
-      || !plans.every((plan: unknown) => exportPlans.some(({ value }) => value === plan))
-      || !columns.every((column: unknown) => exportColumns.some(({ value }) => value === column))) {
+    if (
+      !Array.isArray(plans) ||
+      !Array.isArray(columns) ||
+      !plans.length ||
+      !columns.length ||
+      !plans.every((plan: unknown) =>
+        exportPlans.some(({ value }) => value === plan),
+      ) ||
+      !columns.every((column: unknown) =>
+        exportColumns.some(({ value }) => value === column),
+      )
+    ) {
       return defaultExportSelection();
     }
     return {
-      plans: exportPlans.filter(({ value }) => plans.includes(value)).map(({ value }) => value),
-      columns: exportColumns.filter(({ value }) => columns.includes(value)).map(({ value }) => value),
+      plans: exportPlans
+        .filter(({ value }) => plans.includes(value))
+        .map(({ value }) => value),
+      columns: exportColumns
+        .filter(({ value }) => columns.includes(value))
+        .map(({ value }) => value),
     };
   } catch {
     return defaultExportSelection();
@@ -56,19 +75,51 @@ export const parseExportSelection = (stored: string | null): ExportSelection => 
 };
 
 export const filterExportRegistrations = (
-  registrations: Registration[], selection: ExportSelection,
-): Registration[] => registrations.filter((registration) =>
-  !registration.deleted && selection.plans.includes(registration.plan));
+  registrations: Registration[],
+  selection: ExportSelection,
+): Registration[] =>
+  registrations.filter(
+    (registration) =>
+      !registration.deleted && selection.plans.includes(registration.plan),
+  );
 
-const csvValue = (value: Registration[typeof exportColumns[number]["value"]]): string => {
-  const text = value === null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
+const csvValue = (
+  value: Registration[(typeof exportColumns)[number]["value"]],
+): string => {
+  const text =
+    value === null
+      ? ""
+      : typeof value === "object"
+        ? JSON.stringify(value)
+        : String(value);
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 
-export const registrationsCsv = (registrations: Registration[], selection: ExportSelection): string => {
-  const columns = exportColumns.filter(({ value }) => selection.columns.includes(value));
+export const registrationsCsv = (
+  registrations: Registration[],
+  selection: ExportSelection,
+): string => {
+  const columns = exportColumns.filter(({ value }) =>
+    selection.columns.includes(value),
+  );
   return [
     columns.map(({ label }) => label),
-    ...registrations.map((registration) => columns.map(({ value }) => registration[value])),
-  ].map((row) => row.map(csvValue).join(",")).join("\r\n");
+    ...registrations.map((registration) =>
+      columns.map(({ value }) => {
+        if (value === "latest_allocation") {
+          return registration.latest_allocation === null
+            ? ""
+            : Object.entries(registration.latest_allocation)
+                .map(
+                  ([recipient, amount]) =>
+                    `${recipient}: ${registration.latest_allocation_format === "percentage" ? `${amount}%` : `$${amount}`}`,
+                )
+                .join("; ");
+        }
+        return registration[value];
+      }),
+    ),
+  ]
+    .map((row) => row.map(csvValue).join(","))
+    .join("\r\n");
 };

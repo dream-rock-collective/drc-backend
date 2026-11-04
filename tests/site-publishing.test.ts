@@ -137,11 +137,13 @@ test("remote mode commits and pushes only content", async () => {
     revision,
     config,
   );
+  if (!("commit" in result))
+    throw new Error("Remote publication did not return a commit");
   expect(result.commit).toBe(await git(checkout, "rev-parse", "HEAD"));
   expect(await git(checkout, "status", "--porcelain")).toBe("");
   expect(
     await git(checkout, "ls-remote", "origin", "refs/heads/main"),
-  ).toStartWith(result.commit!);
+  ).toStartWith(result.commit);
   expect(
     await git(
       checkout,
@@ -241,6 +243,8 @@ test("failed push preserves a retryable commit without duplicate commits", async
     initial.revision,
     config,
   );
+  if (!("commit" in result))
+    throw new Error("Remote publication did not return a commit");
   expect(result.commit).toBe(commit);
   expect(result.pending).toBe(false);
   expect(await git(checkout, "rev-list", "--count", "HEAD")).toBe("2");

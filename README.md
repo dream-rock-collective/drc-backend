@@ -79,12 +79,16 @@ curl -X POST http://localhost:6942/register \
 The public payment endpoints are:
 
 - `POST /create-checkout-session` with `{ "userId": 42, "plan": "once" | "monthly" | "yearly" }`; returns the hosted Stripe Checkout URL.
-- `POST /submit-allocation` with `{ "userId": "42", "allocation": { "charityKey": 5 } }`; stores an allocation submission for a paid registration.
+- `POST /submit-allocation` with `{ "userId": "42", "allocation": { "charityKey": 100 }, "format": "percentage" }`; stores an allocation submission for a paid registration.
 - `POST /webhooks/stripe`; configure Stripe to send signed events here. The webhook records completed Checkout Sessions on the registration.
 
 Checkout success returns to the registration site's `/allocate-payment/` page.
-Allocation keys and totals are frontend-owned JSON; the backend validates only
-the payload shape and that the registration has been paid.
+Allocation keys are frontend-owned. Include `format: "dollars" | "percentage"`
+explicitly in new clients; omitted format is legacy compatibility and means dollars.
+Values must be nonnegative integers. Percentage allocations must total exactly
+100; dollar totals remain unrestricted. The registration must have been paid.
+See the [allocation contract](docs/registration-site-api.md#donation-allocations)
+for history and admin editing.
 
 Use Stripe test-mode keys and prices for local development. For local webhook
 delivery, run `stripe listen --forward-to localhost:6942/webhooks/stripe` and
@@ -97,7 +101,7 @@ The React admin SPA is available at `http://localhost:6942/login`.
 **Export CSV** opens a modal with payment-plan and column checkboxes. It exports
 only active registrations matching the selected plans, with any combination of
 all data columns shown in the registration table, including Plan. Allotments
-are exported as JSON. “No payment” means no plan; payment status
+are exported with `$` or `%` units according to their saved format. “No payment” means no plan; payment status
 does not affect the filter. All options start selected. Successful exports save
 the selection in this browser's local storage; Cancel discards changes. JSON
 export is no longer available.
@@ -206,6 +210,13 @@ Section images must exist as regular files under `public/`; symlinks and paths
 outside that directory are excluded. No arbitrary filesystem path is accepted
 from an API request.
 
+Content-boundary and preview tests require a sibling `../registration-site`
+checkout with the matching editor/preview code. Install its dependencies using
+`bun install --frozen-lockfile` from that checkout before running the tests.
+CI checks out a pinned registration-site revision beside the backend and installs
+both repositories' locked dependencies. Update the workflow's fixture revision
+when changing the shared content/preview contract.
+
 Run content-boundary tests with `bun test tests/site-content.test.ts`.
 
 ### Live preview
@@ -243,3 +254,10 @@ test-only `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `BETTER_AUTH_SECRET`, and
 fixture with `docker compose -p drc-editor-test -f compose.editor-test.yml down`.
 Do not combine the fixture with the application Compose file or use production
 credentials. Its data is discarded when the test container stops.
+
+Allocation regression checks: `bun test tests/allocation.test.ts`. To exercise
+migration compatibility and paid API submissions, migrate a disposable database,
+then run `ALLOCATION_TEST_DATABASE_URL=postgres://... bun test tests/allocation-api.test.ts`.
+The database test creates and removes test registrations; it is skipped without
+that explicit test connection. `bun run smoke-api` additionally checks authenticated
+mixed-format history and admin edits against a running disposable API.

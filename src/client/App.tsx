@@ -1,3 +1,4 @@
+import type { AllocationFormat } from "../allocation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchRegistrations, modifyRegistration, signIn, signOut } from "./api";
 import type { Registration } from "./types";
@@ -89,14 +90,19 @@ const paymentIdentifier = (value: string | null) =>
 const notesView = (notes: string | null) =>
   notes ? <span>{notes}</span> : <span className="muted">—</span>;
 
-const allocationView = (allocation: Record<string, number> | null) => {
+const allocationView = (
+  allocation: Record<string, number> | null,
+  format: AllocationFormat | null,
+) => {
   if (!allocation) return <span className="muted">—</span>;
   return (
     <div className="allocation-list">
       {Object.entries(allocation).map(([charity, amount]) => (
         <div className="allocation-item" key={charity}>
           <span title={charity}>{charity}</span>
-          <strong>${amount}</strong>
+          <strong>
+            {format === "percentage" ? `${amount}%` : `$${amount}`}
+          </strong>
         </div>
       ))}
     </div>
@@ -504,7 +510,10 @@ const RegistrationRow = ({
           <td>{paymentIdentifier(registration.stripe_customer_id)}</td>
           <td>{paymentIdentifier(registration.stripe_subscription_id)}</td>
           <td className="allocation-cell">
-            {allocationView(registration.latest_allocation)}
+            {allocationView(
+              registration.latest_allocation,
+              registration.latest_allocation_format,
+            )}
           </td>
           <td className="notes-cell">{notesView(registration.notes)}</td>
           <td className="row-actions">
@@ -569,6 +578,7 @@ const RegistrationEditor = ({
       address?: string;
       birthday?: string | null;
       notes?: string | null;
+      format?: AllocationFormat;
       allocation?: Record<string, number>;
     } = {};
     if (name !== registration.name) data.name = name;
@@ -588,6 +598,7 @@ const RegistrationEditor = ({
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
           throw new Error();
         data.allocation = parsed as Record<string, number>;
+        data.format = registration.latest_allocation_format ?? "dollars";
       } catch {
         onError("Allotments must be a valid JSON object");
         return;
@@ -645,7 +656,7 @@ const RegistrationEditor = ({
           />
         </label>
         <label className="editor-wide">
-          Allotments JSON
+          Allotments JSON ({registration.latest_allocation_format ?? "dollars"})
           <textarea
             value={allocationText}
             onChange={(event) => setAllocationText(event.target.value)}
@@ -747,7 +758,12 @@ const RegistrationCard = ({
           <dt>Subscription ID</dt>
           {detailValue(paymentIdentifier(registration.stripe_subscription_id))}
           <dt>Allotments</dt>
-          {detailValue(allocationView(registration.latest_allocation))}
+          {detailValue(
+            allocationView(
+              registration.latest_allocation,
+              registration.latest_allocation_format,
+            ),
+          )}
           <dt>Notes</dt>
           {detailValue(notesView(registration.notes))}
         </dl>
