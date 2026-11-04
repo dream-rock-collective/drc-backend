@@ -22,5 +22,5 @@
     "forceConsistentCasingInFileNames": true,
     "noPropertyAccessFromIndexSignature": true
   },
-  "include": ["src", "migrations", "scripts"]
+  "include": ["src", "migrations", "scripts", "tests", "playwright.config.ts"]
 }

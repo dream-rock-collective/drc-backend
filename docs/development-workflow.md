@@ -62,6 +62,11 @@ for admin UI integration use `bun run build`. `bun run lint` checks CSS and type
 with `bun run setup-hooks`; it formats and re-stages staged files, rejects
 partially staged files, and runs lint.
 Use focused tests or a small assert-based check for new non-trivial logic.
+Run `bun run test` for all Bun unit tests and `bun run test:e2e` for the
+Playwright browser tests. Browser tests start their own frontend server and
+mock API responses; install Chromium with `bunx playwright install chromium`
+before the first run. Name browser tests `*.e2e.ts` so Bun's unit-test
+discovery does not run them.
 
 `bun run smoke-api` exercises a running API with a seeded administrator and
 creates/edits test registrations. Inspect its setup and use a disposable local

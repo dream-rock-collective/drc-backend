@@ -37,7 +37,7 @@ test.skipIf(!testUrl)(
       });
       const [registration] =
         await sql`INSERT INTO registrations (name, email, payment_status) VALUES ('Allocation test', ${`allocation-${crypto.randomUUID()}@example.com`}, 'paid') RETURNING id`;
-      id = registration!.id;
+      id = registration!["id"];
       for (const body of [
         { userId: id, allocation: { charityA: 5, charityB: 10 } },
         {
