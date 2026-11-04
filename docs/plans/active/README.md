@@ -13,12 +13,14 @@ Existing content editor work is on the `editor` branches, not main. Merge that w
 
 Create each feature branch from main after its prerequisites merge, with one PR per affected repository and matching branch names. Link paired PRs, state deployment order, and keep payment/data compatibility in their acceptance criteria. All plans are proposed, not current API contracts.
 
+Donation-page editing is implemented on `feature/edit-other-pages`; see the
+[current editor contract](../../content-editor.md) and [completion note](../archive/donation-page-editor.md).
+
 ## Plans
 
 | Feature                                                                   | Future branch                     | PR split              |
 | ------------------------------------------------------------------------- | --------------------------------- | --------------------- |
 | [Main-page editor: uploads and navigation](main-page-editor.md)           | `feature/main-page-editor`        | Paired public-site PR |
-| [Donation-page editing](donation-page-editor.md)                          | `feature/donation-page-editor`    | Paired public-site PR |
 | [Monthly mail-art gallery](mail-art-gallery.md)                           | `feature/mail-art-gallery`        | Paired public-site PR |
 | [Percentage donation allocation](percentage-allocation.md)                | `feature/percentage-allocation`   | Paired public-site PR |
 | [Editable financial transparency section](financial-transparency.md)      | `feature/financial-transparency`  | Paired public-site PR |
