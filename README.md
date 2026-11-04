@@ -46,6 +46,7 @@ Deployments use the same sequence through:
 
 ```sh
 bun install
+bun run setup-hooks
 bun run migrations
 bun run seed-admin
 bun run dev
@@ -57,6 +58,11 @@ to override it.
 
 For frontend development, run the API and use `bun run frontend:dev`. Vite
 proxies API and Better Auth requests to Hono.
+
+Run `bun run setup-hooks` once per clone to enable the pre-commit hook. It formats
+staged files with Prettier, re-stages them, and runs `bun run lint`. Partially
+staged files are rejected so unstaged edits cannot be included accidentally.
+To format a file manually, run `bun run format src/client/ContentEditor.tsx`.
 
 ## Public API
 
@@ -203,7 +209,6 @@ directory; only the last three distinct source builds are retained.
 See [the content editor guide](docs/content-editor.md) for the complete editing
 and publishing workflow. Verify preview hosting with
 `bun test tests/site-preview.test.ts`.
-
 
 For authenticated editor browser verification, `compose.editor-test.yml` defines
 an isolated PostgreSQL service with temporary in-memory storage. Start it with
