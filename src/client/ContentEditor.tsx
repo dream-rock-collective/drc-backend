@@ -497,28 +497,40 @@ export function ContentEditor({
           )}
           <div className="content-editor-layout">
             <div className="content-fields">
-              {page === "main"
-                ? Object.entries(content)
-                    .filter(
-                      ([key]) =>
-                        ![
-                          "sections",
-                          "footer",
-                          "subscriptions",
-                          "donations",
-                          "success",
-                        ].includes(key),
-                    )
-                    .map(copyPanel)
-                : copyFields(
-                    page === "success"
-                      ? (content["success"] as CopyFields)
-                      : {
-                          title: (content[page] as SectionPage).title,
-                          body: (content[page] as SectionPage).body,
-                        },
-                    [page],
-                  )}
+              {page === "main" ? (
+                Object.entries(content)
+                  .filter(
+                    ([key]) =>
+                      ![
+                        "sections",
+                        "footer",
+                        "subscriptions",
+                        "donations",
+                        "success",
+                      ].includes(key),
+                  )
+                  .map(copyPanel)
+              ) : page === "success" ? (
+                copyFields(content["success"] as CopyFields, [page])
+              ) : (
+                <section
+                  className="content-panel"
+                  aria-labelledby="page-copy-heading"
+                >
+                  <div className="section-editor-heading">
+                    <h2 id="page-copy-heading">{label([page])}</h2>
+                  </div>
+                  <div className="content-copy-fields">
+                    {copyFields(
+                      {
+                        title: (content[page] as SectionPage).title,
+                        body: (content[page] as SectionPage).body,
+                      },
+                      [page],
+                    )}
+                  </div>
+                </section>
+              )}
               {page === "donations" && (
                 <p className="muted">
                   Keys identify charities in future dollar allocations. Changing

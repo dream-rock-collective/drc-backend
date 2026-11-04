@@ -115,6 +115,15 @@ for (const width of [1280, 390]) {
 
     for (const selected of ["main", "subscriptions", "donations"]) {
       await selectPage.selectOption(selected);
+      if (selected !== "main") {
+        const name =
+          selected === "subscriptions" ? "Subscriptions" : "Donations";
+        await expect(
+          page
+            .getByRole("region", { name, exact: true })
+            .getByRole("textbox", { name: `${name} / Title`, exact: true }),
+        ).toBeVisible();
+      }
       await page.evaluate(() => window.scrollTo(0, 0));
       const controls = page.locator(".section-controls").first();
       const remove = controls.getByRole("button", {
@@ -137,6 +146,7 @@ for (const width of [1280, 390]) {
       await expect
         .poll(() =>
           page
+            .getByRole("region", { name: "Page sections", exact: true })
             .locator(".section-editor-heading")
             .evaluate((element) =>
               Math.round(element.getBoundingClientRect().top),
