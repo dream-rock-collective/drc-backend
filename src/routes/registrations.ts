@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import {
-  allocationSchema,
+  allocationSubmissionSchema,
+  allocationFormatSchema,
+  type AllocationFormat,
   insertAllocation,
 } from "../allocation";
 import { database } from "../db";
@@ -21,10 +23,13 @@ const registrationFields = {
 
 const registrationSchema = z.object(registrationFields);
 const notesSchema = z.string().trim().max(5000).nullable().optional();
-const editSchema = z.object(registrationFields).partial().refine(
-  (data) => Object.keys(data).length > 0,
-  "At least one field is required",
-);
+const editSchema = z
+  .object(registrationFields)
+  .partial()
+  .refine(
+    (data) => Object.keys(data).length > 0,
+    "At least one field is required",
+  );
 
 type RegistrationRow = {
   id: number;
@@ -40,6 +45,7 @@ type RegistrationRow = {
   created_at: Date;
   deleted_at: Date | null;
   notes: string | null;
+  latest_allocation_format: AllocationFormat | null;
   latest_allocation: Record<string, number> | string | null;
 };
 
@@ -55,6 +61,7 @@ const toAdminRegistration = (registration: RegistrationRow) => ({
   stripe_subscription_id: registration.stripe_subscription_id,
   plan: registration.plan,
   payment_status: registration.payment_status,
+  latest_allocation_format: registration.latest_allocation_format,
   latest_allocation: normalizeAllocation(registration.latest_allocation),
   created_at: registration.created_at,
   deleted: registration.deleted_at !== null,
@@ -68,7 +75,8 @@ const normalizeAllocation = (
 
   try {
     const parsed: unknown = JSON.parse(value);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return null;
     return Object.fromEntries(
       Object.entries(parsed).filter(([, amount]) => typeof amount === "number"),
     );
@@ -77,8 +85,9 @@ const normalizeAllocation = (
   }
 };
 
-const requireSession = (c: { get: (key: "user") => SessionVariables["user"] }) =>
-  c.get("user") !== null;
+const requireSession = (c: {
+  get: (key: "user") => SessionVariables["user"];
+}) => c.get("user") !== null;
 
 registrationsRoute.post("/register", async (c) => {
   logger.info("[registrations] public registration request received", {
@@ -97,10 +106,13 @@ registrationsRoute.post("/register", async (c) => {
   const result = registrationSchema.safeParse(body);
 
   if (!result.success) {
-    logger.warn("[registrations] public registration rejected: schema validation failed", {
-      issueCount: result.error.issues.length,
-      fields: result.error.issues.map((issue) => issue.path.join(".")),
-    });
+    logger.warn(
+      "[registrations] public registration rejected: schema validation failed",
+      {
+        issueCount: result.error.issues.length,
+        fields: result.error.issues.map((issue) => issue.path.join(".")),
+      },
+    );
     return c.json(
       {
         error: "Please provide a name and valid email address",
@@ -120,14 +132,16 @@ registrationsRoute.post("/register", async (c) => {
   });
 
   try {
-    const [registration] = await database<{
-      id: number;
-      name: string;
-      email: string;
-      address: string | null;
-      birthday: string | null;
-      created_at: Date;
-    }[]>`
+    const [registration] = await database<
+      {
+        id: number;
+        name: string;
+        email: string;
+        address: string | null;
+        birthday: string | null;
+        created_at: Date;
+      }[]
+    >`
       INSERT INTO registrations (name, email, address, birthday)
       VALUES (${name}, ${email}, ${address || null}, ${birthday ?? null})
       RETURNING id, name, email, address, birthday, created_at
@@ -147,7 +161,9 @@ registrationsRoute.post("/register", async (c) => {
 registrationsRoute.get("/registrations", async (c) => {
   logger.info("[registrations] admin registration list requested");
   if (!requireSession(c)) {
-    logger.warn("[registrations] admin registration list rejected: authentication required");
+    logger.warn(
+      "[registrations] admin registration list rejected: authentication required",
+    );
     return c.json({ error: "Authentication required" }, 401);
   }
 
@@ -155,10 +171,10 @@ registrationsRoute.get("/registrations", async (c) => {
     const registrations = await database<RegistrationRow[]>`
       SELECT id, name, email, address, stripe_payment_intent_id, stripe_customer_id,
         stripe_subscription_id, birthday, notes, plan, payment_status, created_at, deleted_at,
-        latest.allocation AS latest_allocation
+        latest.allocation AS latest_allocation, latest.format AS latest_allocation_format
       FROM registrations
       LEFT JOIN LATERAL (
-        SELECT allocation
+        SELECT allocation, format
         FROM allocations
         WHERE allocations.registration_id = registrations.id
         ORDER BY submitted_at DESC, id DESC
@@ -169,7 +185,9 @@ registrationsRoute.get("/registrations", async (c) => {
 
     logger.info("[registrations] admin registration list loaded", {
       count: registrations.length,
-      deletedCount: registrations.filter((registration) => registration.deleted_at !== null).length,
+      deletedCount: registrations.filter(
+        (registration) => registration.deleted_at !== null,
+      ).length,
     });
     return c.json({ registrations: registrations.map(toAdminRegistration) });
   } catch (error) {
@@ -183,14 +201,40 @@ const modificationSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("edit"),
     id: z.string().trim().min(1),
-    data: editSchema.extend({ allocation: allocationSchema.optional(), notes: notesSchema }),
+    data: editSchema
+      .safeExtend({
+        allocation: allocationSubmissionSchema.shape.allocation.optional(),
+        format: allocationFormatSchema.optional(),
+        notes: notesSchema,
+      })
+      .superRefine((data, context) => {
+        if (data.allocation !== undefined) {
+          const result = allocationSubmissionSchema.safeParse(data);
+          if (!result.success) {
+            for (const issue of result.error.issues)
+              context.addIssue({
+                code: "custom",
+                path: issue.path,
+                message: issue.message,
+              });
+          }
+        } else if (data.format !== undefined) {
+          context.addIssue({
+            code: "custom",
+            path: ["format"],
+            message: "Format requires an allocation",
+          });
+        }
+      }),
   }),
 ]);
 
 registrationsRoute.post("/modify-registration", async (c) => {
   logger.info("[registrations] admin modification request received");
   if (!requireSession(c)) {
-    logger.warn("[registrations] admin modification rejected: authentication required");
+    logger.warn(
+      "[registrations] admin modification rejected: authentication required",
+    );
     return c.json({ error: "Authentication required" }, 401);
   }
 
@@ -205,10 +249,13 @@ registrationsRoute.post("/modify-registration", async (c) => {
   const result = modificationSchema.safeParse(body);
 
   if (!result.success) {
-    logger.warn("[registrations] admin modification rejected: schema validation failed", {
-      issueCount: result.error.issues.length,
-      fields: result.error.issues.map((issue) => issue.path.join(".")),
-    });
+    logger.warn(
+      "[registrations] admin modification rejected: schema validation failed",
+      {
+        issueCount: result.error.issues.length,
+        fields: result.error.issues.map((issue) => issue.path.join(".")),
+      },
+    );
     return c.json(
       {
         error: "Invalid registration modification",
@@ -220,9 +267,12 @@ registrationsRoute.post("/modify-registration", async (c) => {
 
   const id = Number(result.data.id);
   if (!Number.isSafeInteger(id) || id < 1) {
-    logger.warn("[registrations] admin modification rejected: invalid registration id", {
-      suppliedId: result.data.id,
-    });
+    logger.warn(
+      "[registrations] admin modification rejected: invalid registration id",
+      {
+        suppliedId: result.data.id,
+      },
+    );
     return c.json({ error: "Registration id must be a positive integer" }, 400);
   }
 
@@ -235,7 +285,9 @@ registrationsRoute.post("/modify-registration", async (c) => {
   try {
     const [registration] = await database.begin(async (sql) => {
       if (result.data.type === "delete") {
-        logger.info("[registrations] soft deleting registration", { registrationId: id });
+        logger.info("[registrations] soft deleting registration", {
+          registrationId: id,
+        });
         await sql`
           UPDATE registrations
           SET deleted_at = NOW()
@@ -244,16 +296,28 @@ registrationsRoute.post("/modify-registration", async (c) => {
       } else {
         const { data } = result.data;
         if (data.allocation) {
-          logger.info("[registrations] admin modification includes allocation", {
-            registrationId: id,
-            organizations: Object.keys(data.allocation),
-            total: Object.values(data.allocation).reduce((sum, amount) => sum + amount, 0),
-          });
+          logger.info(
+            "[registrations] admin modification includes allocation",
+            {
+              registrationId: id,
+              organizations: Object.keys(data.allocation),
+              total: Object.values(data.allocation).reduce(
+                (sum, amount) => sum + amount,
+                0,
+              ),
+            },
+          );
           const [current] = await sql<{ id: number }[]>`
             SELECT id FROM registrations WHERE id = ${id}
           `;
           if (!current) return [] as RegistrationRow[];
-          await insertAllocation(sql, id, data.allocation);
+          const allocation = allocationSubmissionSchema.parse(data);
+          await insertAllocation(
+            sql,
+            id,
+            allocation.allocation,
+            allocation.format,
+          );
         }
         await sql`
           UPDATE registrations
@@ -271,10 +335,10 @@ registrationsRoute.post("/modify-registration", async (c) => {
         SELECT registrations.id, name, email, address, stripe_payment_intent_id,
           stripe_customer_id, stripe_subscription_id, birthday, plan,
           payment_status, created_at, deleted_at, notes,
-          latest.allocation AS latest_allocation
+          latest.allocation AS latest_allocation, latest.format AS latest_allocation_format
         FROM registrations
         LEFT JOIN LATERAL (
-          SELECT allocation
+          SELECT allocation, format
           FROM allocations
           WHERE allocations.registration_id = registrations.id
           ORDER BY submitted_at DESC, allocations.id DESC
@@ -285,7 +349,9 @@ registrationsRoute.post("/modify-registration", async (c) => {
     });
 
     if (!registration) {
-      logger.warn("[registrations] admin modification found no registration", { registrationId: id });
+      logger.warn("[registrations] admin modification found no registration", {
+        registrationId: id,
+      });
       return c.json({ error: "Registration not found" }, 404);
     }
 

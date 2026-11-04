@@ -1,6 +1,6 @@
 # Registration-site API reference
 
-This is the API contract for the public registration website. This reference covers health, registration, and checkout. The
+This is the API contract for the public registration website. This reference covers health, registration, checkout, and donation allocations. The
 [repository README](../README.md#public-api) also describes allocation and Stripe
 webhook endpoints; inspect the owning routes for their full behavior.
 
@@ -162,3 +162,69 @@ The registration is marked paid only after Stripe sends a signed
 `checkout.session.completed` event to `POST /webhooks/stripe`. Successful
 Checkout sessions return to `/allocate-payment/`; canceled sessions return to
 `/registered/`.
+
+## Donation allocations
+
+`POST /submit-allocation` accepts:
+
+```json
+{
+  "userId": 42,
+  "allocation": { "charityA": 33, "charityB": 67 },
+  "format": "percentage"
+}
+```
+
+New clients must include `format` explicitly: `"dollars"` or `"percentage"`.
+Legacy payloads without it are interpreted as dollars, so
+`{"userId":42,"allocation":{"charityA":5,"charityB":10}}` remains valid.
+Unknown formats and `null` are rejected. Recipient keys must be nonempty and
+values must be nonnegative integers. Percentage values must total exactly 100;
+any whole-percent split is supported. Dollar totals remain unrestricted.
+
+Returns `201` with `{"allocationId":123}`. Invalid bodies return `400`, missing
+registrations return `404`, unpaid registrations return `403`, and persistence
+failures return `500`. Checkout prices and the donation share are unaffected.
+
+Authenticated `GET /registrations/:id/allocations` returns newest-first history:
+
+```json
+{
+  "allocations": [
+    {
+      "id": 123,
+      "allocation": { "charityA": 33, "charityB": 67 },
+      "format": "percentage",
+      "submitted_at": "2026-11-03T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+Authenticated `GET /registrations` and the response from
+`POST /modify-registration` include `latest_allocation` and
+`latest_allocation_format`. Both are `null` when there is no allocation.
+Historical rows are dollars; their original values are unchanged.
+
+Admin allocation edits use:
+
+```json
+{
+  "type": "edit",
+  "id": "42",
+  "data": {
+    "allocation": { "charityA": 40, "charityB": 60 },
+    "format": "percentage"
+  }
+}
+```
+
+Edits append history rather than overwriting it. The same allocation validation
+and legacy dollar default apply. Supplying format without allocation is invalid.
+The admin preserves the current format when editing and displays/exports `$` or
+`%` accordingly. Admin edits retain their existing session authorization behavior;
+the public submission endpoint additionally requires completed payment.
+
+Deploy migration `0008_allocation_format.ts` and backend/admin together before
+public clients send percentages. Migration adds a constrained format column
+(default dollars); it does not convert existing allocation values.

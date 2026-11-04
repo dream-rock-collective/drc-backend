@@ -1,3 +1,4 @@
+import type { AllocationFormat } from "../allocation";
 import { useEffect, useMemo, useState } from "react";
 import { fetchRegistrations, modifyRegistration, signIn, signOut } from "./api";
 import type { Registration } from "./types";
@@ -59,10 +60,14 @@ const csvValue = (value: unknown): string => {
 
 const allocationCsvValue = (
   allocation: Record<string, number> | null,
+  format: AllocationFormat | null,
 ): string => {
   if (!allocation) return "";
   return Object.entries(allocation)
-    .map(([charity, amount]) => `${charity}: $${amount}`)
+    .map(
+      ([charity, amount]) =>
+        `${charity}: ${format === "percentage" ? `${amount}%` : `$${amount}`}`,
+    )
     .join("; ");
 };
 
@@ -99,22 +104,31 @@ const planTotalLabel = (
   return total;
 };
 
-const paymentIdentifier = (value: string | null) => (
-  value ? <code className="payment-id" title={value}>{value}</code> : <span className="muted">—</span>
-);
+const paymentIdentifier = (value: string | null) =>
+  value ? (
+    <code className="payment-id" title={value}>
+      {value}
+    </code>
+  ) : (
+    <span className="muted">—</span>
+  );
 
-const notesView = (notes: string | null) => (
-  notes ? <span>{notes}</span> : <span className="muted">—</span>
-);
+const notesView = (notes: string | null) =>
+  notes ? <span>{notes}</span> : <span className="muted">—</span>;
 
-const allocationView = (allocation: Record<string, number> | null) => {
+const allocationView = (
+  allocation: Record<string, number> | null,
+  format: AllocationFormat | null,
+) => {
   if (!allocation) return <span className="muted">—</span>;
   return (
     <div className="allocation-list">
       {Object.entries(allocation).map(([charity, amount]) => (
         <div className="allocation-item" key={charity}>
           <span title={charity}>{charity}</span>
-          <strong>${amount}</strong>
+          <strong>
+            {format === "percentage" ? `${amount}%` : `$${amount}`}
+          </strong>
         </div>
       ))}
     </div>
@@ -138,7 +152,8 @@ export const App = () => {
     return <LoginPage />;
   }
 
-  if (path === "/editor") return <ContentEditor onUnauthenticated={redirectToLogin} />;
+  if (path === "/editor")
+    return <ContentEditor onUnauthenticated={redirectToLogin} />;
 
   return <Dashboard onUnauthenticated={redirectToLogin} />;
 };
@@ -174,23 +189,47 @@ const LoginPage = () => {
         <form onSubmit={submit} className="stack-form">
           <label>
             Email
-            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" />
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              autoComplete="email"
+            />
           </label>
           <label>
             Password
-            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" />
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              autoComplete="current-password"
+            />
           </label>
-          {error && <p className="form-error" role="alert">{error}</p>}
-          <button type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={busy}>
+            {busy ? "Signing in…" : "Sign in"}
+          </button>
         </form>
       </section>
     </main>
   );
 };
 
-const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => {
+const Dashboard = ({
+  onUnauthenticated,
+}: {
+  onUnauthenticated: () => void;
+}) => {
   const [registrations, setRegistrations] = useState<Registration[]>(readCache);
-  const [lastBackup, setLastBackup] = useState<string | null>(readBackupTimestamp);
+  const [lastBackup, setLastBackup] = useState<string | null>(
+    readBackupTimestamp,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -209,7 +248,11 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
         if (reason instanceof Error && reason.message === "AUTH_REQUIRED") {
           onUnauthenticated();
         } else {
-          setError(reason instanceof Error ? reason.message : "Could not load registrations");
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "Could not load registrations",
+          );
         }
       })
       .finally(() => {
@@ -226,26 +269,34 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
     [registrations],
   );
 
-  const analytics = useMemo(() => visibleRegistrations.reduce(
-    (counts, registration) => {
-      if (registration.plan === "monthly") counts.monthly += 1;
-      else if (registration.plan === "once") counts.once += 1;
-      else if (registration.plan === "yearly") counts.yearly += 1;
-      else counts.newsletter += 1;
-      return counts;
-    },
-    { monthly: 0, once: 0, yearly: 0, newsletter: 0 },
-  ), [visibleRegistrations]);
+  const analytics = useMemo(
+    () =>
+      visibleRegistrations.reduce(
+        (counts, registration) => {
+          if (registration.plan === "monthly") counts.monthly += 1;
+          else if (registration.plan === "once") counts.once += 1;
+          else if (registration.plan === "yearly") counts.yearly += 1;
+          else counts.newsletter += 1;
+          return counts;
+        },
+        { monthly: 0, once: 0, yearly: 0, newsletter: 0 },
+      ),
+    [visibleRegistrations],
+  );
 
   const patchRegistration = (updated: Registration): void => {
-    const next = registrations.map((registration) => registration.id === updated.id ? updated : registration);
+    const next = registrations.map((registration) =>
+      registration.id === updated.id ? updated : registration,
+    );
     setRegistrations(next);
     const savedAt = saveCache(next);
     if (savedAt) setLastBackup(savedAt);
   };
 
   const exportData = (): void => {
-    const blob = new Blob([JSON.stringify(registrations, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(registrations, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -257,10 +308,16 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
   const exportCsv = (): void => {
     const rows = [
       exportColumns,
-      ...registrations.map((registration) => exportColumns.map((column) => {
-        if (column === "latest_allocation") return allocationCsvValue(registration.latest_allocation);
-        return registration[column];
-      })),
+      ...registrations.map((registration) =>
+        exportColumns.map((column) => {
+          if (column === "latest_allocation")
+            return allocationCsvValue(
+              registration.latest_allocation,
+              registration.latest_allocation_format,
+            );
+          return registration[column];
+        }),
+      ),
     ];
     const csv = rows.map((row) => row.map(csvValue).join(",")).join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -272,13 +329,23 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
     URL.revokeObjectURL(url);
   };
 
-  const deleteRegistration = async (registration: Registration): Promise<void> => {
+  const deleteRegistration = async (
+    registration: Registration,
+  ): Promise<void> => {
     if (!window.confirm(`Delete registration #${registration.id}?`)) return;
     try {
-      patchRegistration(await modifyRegistration({ type: "delete", id: registration.id }));
+      patchRegistration(
+        await modifyRegistration({ type: "delete", id: registration.id }),
+      );
     } catch (reason) {
-      if (reason instanceof Error && reason.message === "AUTH_REQUIRED") onUnauthenticated();
-      else setError(reason instanceof Error ? reason.message : "Could not delete registration");
+      if (reason instanceof Error && reason.message === "AUTH_REQUIRED")
+        onUnauthenticated();
+      else
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : "Could not delete registration",
+        );
     }
   };
 
@@ -292,7 +359,9 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
         <img className="admin-cloud admin-cloud-e" src="/cloud.png" alt="" />
         <img className="admin-cloud admin-cloud-f" src="/cloud.png" alt="" />
       </div>
-      <p className="backup-status">Last local backup: {formatBackupTimestamp(lastBackup)}</p>
+      <p className="backup-status">
+        Last local backup: {formatBackupTimestamp(lastBackup)}
+      </p>
       <header className="page-header">
         <div>
           <p className="eyebrow">Dream Rock Collective</p>
@@ -302,13 +371,38 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
           </div>
         </div>
         <div className="toolbar">
-          <button type="button" className="secondary" onClick={() => { window.location.href = "/editor"; }}>Website editor</button>
-          <button type="button" className="secondary" onClick={exportData}>Export JSON</button>
-          <button type="button" className="secondary" onClick={exportCsv}>Export CSV</button>
-          <button type="button" className="secondary" onClick={async () => { await signOut(); redirectToLogin(); }}>Sign out</button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              window.location.href = "/editor";
+            }}
+          >
+            Website editor
+          </button>
+          <button type="button" className="secondary" onClick={exportData}>
+            Export JSON
+          </button>
+          <button type="button" className="secondary" onClick={exportCsv}>
+            Export CSV
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={async () => {
+              await signOut();
+              redirectToLogin();
+            }}
+          >
+            Sign out
+          </button>
         </div>
       </header>
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
       <section className="analytics" aria-label="Registration analytics">
         <AnalyticsCard
           label="Monthly Registrations"
@@ -327,14 +421,29 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
         />
         <AnalyticsCard label="No Payment" value={analytics.newsletter} />
       </section>
-      {loading && registrations.length === 0 ? <p className="muted">Loading registrations…</p> : (
+      {loading && registrations.length === 0 ? (
+        <p className="muted">Loading registrations…</p>
+      ) : (
         <section className="table-card desktop-registrations">
           <table>
-            <thead><tr>
-              <th>ID</th><th>Name</th><th>Email</th><th>Address</th><th>Birthday</th><th>Created</th>
-              <th>Payment status</th><th>Plan</th><th>Payment intent ID</th><th>Customer ID</th>
-              <th>Subscription ID</th><th>Allotments</th><th>Notes</th><th>Actions</th>
-            </tr></thead>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Address</th>
+                <th>Birthday</th>
+                <th>Created</th>
+                <th>Payment status</th>
+                <th>Plan</th>
+                <th>Payment intent ID</th>
+                <th>Customer ID</th>
+                <th>Subscription ID</th>
+                <th>Allotments</th>
+                <th>Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
             <tbody>
               {visibleRegistrations.map((registration) => (
                 <RegistrationRow
@@ -343,36 +452,52 @@ const Dashboard = ({ onUnauthenticated }: { onUnauthenticated: () => void }) => 
                   editing={editingId === registration.id}
                   onEdit={() => setEditingId(registration.id)}
                   onCancel={() => setEditingId(null)}
-                  onSaved={(updated) => { patchRegistration(updated); setEditingId(null); }}
+                  onSaved={(updated) => {
+                    patchRegistration(updated);
+                    setEditingId(null);
+                  }}
                   onDelete={() => void deleteRegistration(registration)}
                   onError={setError}
                 />
               ))}
             </tbody>
           </table>
-          {visibleRegistrations.length === 0 && <p className="empty-state">No active registrations.</p>}
+          {visibleRegistrations.length === 0 && (
+            <p className="empty-state">No active registrations.</p>
+          )}
         </section>
       )}
-      {(!loading || registrations.length > 0) && <section className="mobile-registrations" aria-label="Registrations">
-        {visibleRegistrations.map((registration) => (
-          <RegistrationCard
-            key={registration.id}
-            registration={registration}
-            editing={editingId === registration.id}
-            onEdit={() => setEditingId(registration.id)}
-            onCancel={() => setEditingId(null)}
-            onSaved={(updated) => { patchRegistration(updated); setEditingId(null); }}
-            onDelete={() => void deleteRegistration(registration)}
-            onError={setError}
-          />
-        ))}
-        {visibleRegistrations.length === 0 && <p className="empty-state">No active registrations.</p>}
-      </section>}
+      {(!loading || registrations.length > 0) && (
+        <section className="mobile-registrations" aria-label="Registrations">
+          {visibleRegistrations.map((registration) => (
+            <RegistrationCard
+              key={registration.id}
+              registration={registration}
+              editing={editingId === registration.id}
+              onEdit={() => setEditingId(registration.id)}
+              onCancel={() => setEditingId(null)}
+              onSaved={(updated) => {
+                patchRegistration(updated);
+                setEditingId(null);
+              }}
+              onDelete={() => void deleteRegistration(registration)}
+              onError={setError}
+            />
+          ))}
+          {visibleRegistrations.length === 0 && (
+            <p className="empty-state">No active registrations.</p>
+          )}
+        </section>
+      )}
     </main>
   );
 };
 
-const AnalyticsCard = ({ label, value, price }: {
+const AnalyticsCard = ({
+  label,
+  value,
+  price,
+}: {
   label: string;
   value: number;
   price?: string;
@@ -384,7 +509,15 @@ const AnalyticsCard = ({ label, value, price }: {
   </article>
 );
 
-const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onDelete, onError }: {
+const RegistrationRow = ({
+  registration,
+  editing,
+  onEdit,
+  onCancel,
+  onSaved,
+  onDelete,
+  onError,
+}: {
   registration: Registration;
   editing: boolean;
   onEdit: () => void;
@@ -393,34 +526,69 @@ const RegistrationRow = ({ registration, editing, onEdit, onCancel, onSaved, onD
   onDelete: () => void;
   onError: (message: string) => void;
 }) => {
-  return <tr>
-    {editing ? <td colSpan={14}><RegistrationEditor
-      registration={registration}
-      onCancel={onCancel}
-      onSaved={onSaved}
-      onError={onError}
-    /></td> : <>
-      <td className="monospace">{registration.id}</td>
-      <td>{registration.name}</td>
-      <td>{registration.email}</td>
-      <td>{registration.address || <span className="muted">—</span>}</td>
-      <td>{registration.birthday || <span className="muted">—</span>}</td>
-      <td className="monospace">{new Date(registration.created_at).toLocaleString()}</td>
-      <td><span className={`payment-status payment-status-${registration.payment_status}`}>
-        {registration.payment_status}
-      </span></td>
-      <td>{planLabel(registration.plan)}</td>
-      <td>{paymentIdentifier(registration.stripe_payment_intent_id)}</td>
-      <td>{paymentIdentifier(registration.stripe_customer_id)}</td>
-      <td>{paymentIdentifier(registration.stripe_subscription_id)}</td>
-      <td className="allocation-cell">{allocationView(registration.latest_allocation)}</td>
-      <td className="notes-cell">{notesView(registration.notes)}</td>
-      <td className="row-actions"><button type="button" className="link-button" onClick={onEdit}>Edit</button><button type="button" className="link-button danger" onClick={onDelete}>Delete</button></td>
-    </>}
-  </tr>;
+  return (
+    <tr>
+      {editing ? (
+        <td colSpan={14}>
+          <RegistrationEditor
+            registration={registration}
+            onCancel={onCancel}
+            onSaved={onSaved}
+            onError={onError}
+          />
+        </td>
+      ) : (
+        <>
+          <td className="monospace">{registration.id}</td>
+          <td>{registration.name}</td>
+          <td>{registration.email}</td>
+          <td>{registration.address || <span className="muted">—</span>}</td>
+          <td>{registration.birthday || <span className="muted">—</span>}</td>
+          <td className="monospace">
+            {new Date(registration.created_at).toLocaleString()}
+          </td>
+          <td>
+            <span
+              className={`payment-status payment-status-${registration.payment_status}`}
+            >
+              {registration.payment_status}
+            </span>
+          </td>
+          <td>{planLabel(registration.plan)}</td>
+          <td>{paymentIdentifier(registration.stripe_payment_intent_id)}</td>
+          <td>{paymentIdentifier(registration.stripe_customer_id)}</td>
+          <td>{paymentIdentifier(registration.stripe_subscription_id)}</td>
+          <td className="allocation-cell">
+            {allocationView(
+              registration.latest_allocation,
+              registration.latest_allocation_format,
+            )}
+          </td>
+          <td className="notes-cell">{notesView(registration.notes)}</td>
+          <td className="row-actions">
+            <button type="button" className="link-button" onClick={onEdit}>
+              Edit
+            </button>
+            <button
+              type="button"
+              className="link-button danger"
+              onClick={onDelete}
+            >
+              Delete
+            </button>
+          </td>
+        </>
+      )}
+    </tr>
+  );
 };
 
-const RegistrationEditor = ({ registration, onCancel, onSaved, onError }: {
+const RegistrationEditor = ({
+  registration,
+  onCancel,
+  onSaved,
+  onError,
+}: {
   registration: Registration;
   onCancel: () => void;
   onSaved: (registration: Registration) => void;
@@ -432,7 +600,9 @@ const RegistrationEditor = ({ registration, onCancel, onSaved, onError }: {
   const [birthday, setBirthday] = useState(registration.birthday ?? "");
   const [notes, setNotes] = useState(registration.notes ?? "");
   const [allocationText, setAllocationText] = useState(
-    registration.latest_allocation ? JSON.stringify(registration.latest_allocation) : "",
+    registration.latest_allocation
+      ? JSON.stringify(registration.latest_allocation)
+      : "",
   );
   const [busy, setBusy] = useState(false);
 
@@ -442,25 +612,42 @@ const RegistrationEditor = ({ registration, onCancel, onSaved, onError }: {
     setAddress(registration.address ?? "");
     setBirthday(registration.birthday ?? "");
     setNotes(registration.notes ?? "");
-    setAllocationText(registration.latest_allocation ? JSON.stringify(registration.latest_allocation) : "");
+    setAllocationText(
+      registration.latest_allocation
+        ? JSON.stringify(registration.latest_allocation)
+        : "",
+    );
   }, [registration]);
 
   const save = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data: {
-      name?: string; email?: string; address?: string; birthday?: string | null;
-      notes?: string | null; allocation?: Record<string, number>;
+      name?: string;
+      email?: string;
+      address?: string;
+      birthday?: string | null;
+      notes?: string | null;
+      format?: AllocationFormat;
+      allocation?: Record<string, number>;
     } = {};
     if (name !== registration.name) data.name = name;
     if (email !== registration.email) data.email = email;
     if (address !== registration.address) data.address = address;
-    if (birthday !== (registration.birthday ?? "")) data.birthday = birthday || null;
+    if (birthday !== (registration.birthday ?? ""))
+      data.birthday = birthday || null;
     if (notes !== (registration.notes ?? "")) data.notes = notes || null;
-    if (allocationText !== (registration.latest_allocation ? JSON.stringify(registration.latest_allocation) : "")) {
+    if (
+      allocationText !==
+      (registration.latest_allocation
+        ? JSON.stringify(registration.latest_allocation)
+        : "")
+    ) {
       try {
         const parsed: unknown = JSON.parse(allocationText);
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+          throw new Error();
         data.allocation = parsed as Record<string, number>;
+        data.format = registration.latest_allocation_format ?? "dollars";
       } catch {
         onError("Allotments must be a valid JSON object");
         return;
@@ -469,31 +656,98 @@ const RegistrationEditor = ({ registration, onCancel, onSaved, onError }: {
     if (Object.keys(data).length === 0) return onCancel();
     setBusy(true);
     try {
-      onSaved(await modifyRegistration({ type: "edit", id: registration.id, data }));
+      onSaved(
+        await modifyRegistration({ type: "edit", id: registration.id, data }),
+      );
     } catch (reason) {
-      onError(reason instanceof Error ? reason.message : "Could not edit registration");
+      onError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not edit registration",
+      );
     } finally {
       setBusy(false);
     }
   };
 
-  return <form className="registration-editor" onSubmit={save}>
-    <div className="editor-fields">
-      <label>Name<input value={name} onChange={(event) => setName(event.target.value)} required /></label>
-      <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-      <label>Address<input value={address} onChange={(event) => setAddress(event.target.value)} /></label>
-      <label>Birthday<input value={birthday} onChange={(event) => setBirthday(event.target.value)} /></label>
-      <label className="editor-wide">Allotments JSON<textarea value={allocationText} onChange={(event) => setAllocationText(event.target.value)} placeholder="{ &quot;charityKey&quot;: 1 }" /></label>
-      <label className="editor-wide">Notes<textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Add an internal note" maxLength={5000} /></label>
-    </div>
-    <div className="editor-actions">
-      <button type="submit" disabled={busy}>{busy ? "Saving…" : "Save changes"}</button>
-      <button type="button" className="secondary" onClick={onCancel} disabled={busy}>Cancel</button>
-    </div>
-  </form>;
+  return (
+    <form className="registration-editor" onSubmit={save}>
+      <div className="editor-fields">
+        <label>
+          Name
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            required
+          />
+        </label>
+        <label>
+          Email
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+        </label>
+        <label>
+          Address
+          <input
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+          />
+        </label>
+        <label>
+          Birthday
+          <input
+            value={birthday}
+            onChange={(event) => setBirthday(event.target.value)}
+          />
+        </label>
+        <label className="editor-wide">
+          Allotments JSON ({registration.latest_allocation_format ?? "dollars"})
+          <textarea
+            value={allocationText}
+            onChange={(event) => setAllocationText(event.target.value)}
+            placeholder='{ "charityKey": 1 }'
+          />
+        </label>
+        <label className="editor-wide">
+          Notes
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Add an internal note"
+            maxLength={5000}
+          />
+        </label>
+      </div>
+      <div className="editor-actions">
+        <button type="submit" disabled={busy}>
+          {busy ? "Saving…" : "Save changes"}
+        </button>
+        <button
+          type="button"
+          className="secondary"
+          onClick={onCancel}
+          disabled={busy}
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
 };
 
-const RegistrationCard = ({ registration, editing, onEdit, onCancel, onSaved, onDelete, onError }: {
+const RegistrationCard = ({
+  registration,
+  editing,
+  onEdit,
+  onCancel,
+  onSaved,
+  onDelete,
+  onError,
+}: {
   registration: Registration;
   editing: boolean;
   onEdit: () => void;
@@ -502,42 +756,77 @@ const RegistrationCard = ({ registration, editing, onEdit, onCancel, onSaved, on
   onDelete: () => void;
   onError: (message: string) => void;
 }) => {
-  return <article className="registration-card">
-    <div className="registration-card-header">
-      <div>
-        <p className="card-id">Registration #{registration.id}</p>
-        <h2>{registration.name}</h2>
-        <a href={`mailto:${registration.email}`}>{registration.email}</a>
+  return (
+    <article className="registration-card">
+      <div className="registration-card-header">
+        <div>
+          <p className="card-id">Registration #{registration.id}</p>
+          <h2>{registration.name}</h2>
+          <a href={`mailto:${registration.email}`}>{registration.email}</a>
+        </div>
+        <span
+          className={`payment-status payment-status-${registration.payment_status}`}
+        >
+          {registration.payment_status}
+        </span>
       </div>
-      <span className={`payment-status payment-status-${registration.payment_status}`}>
-        {registration.payment_status}
-      </span>
-    </div>
-    <div className="card-summary">
-      <span><strong>Plan</strong>{planLabel(registration.plan)}</span>
-      <span><strong>Birthday</strong>{registration.birthday || <span className="muted">—</span>}</span>
-    </div>
-    <div className="row-actions card-actions">
-      <button type="button" className="link-button" onClick={onEdit}>Edit</button>
-      <button type="button" className="link-button danger" onClick={onDelete}>Delete</button>
-    </div>
-    <details className="registration-details">
-      <summary>View registration details</summary>
-      <dl>
-        <dt>Address</dt>{detailValue(registration.address)}
-        <dt>Created</dt>{detailValue(new Date(registration.created_at).toLocaleString(), "monospace")}
-        <dt>Payment intent ID</dt>{detailValue(paymentIdentifier(registration.stripe_payment_intent_id))}
-        <dt>Customer ID</dt>{detailValue(paymentIdentifier(registration.stripe_customer_id))}
-        <dt>Subscription ID</dt>{detailValue(paymentIdentifier(registration.stripe_subscription_id))}
-        <dt>Allotments</dt>{detailValue(allocationView(registration.latest_allocation))}
-        <dt>Notes</dt>{detailValue(notesView(registration.notes))}
-      </dl>
-    </details>
-    {editing && <div className="mobile-editor"><RegistrationEditor
-      registration={registration}
-      onCancel={onCancel}
-      onSaved={onSaved}
-      onError={onError}
-    /></div>}
-  </article>;
+      <div className="card-summary">
+        <span>
+          <strong>Plan</strong>
+          {planLabel(registration.plan)}
+        </span>
+        <span>
+          <strong>Birthday</strong>
+          {registration.birthday || <span className="muted">—</span>}
+        </span>
+      </div>
+      <div className="row-actions card-actions">
+        <button type="button" className="link-button" onClick={onEdit}>
+          Edit
+        </button>
+        <button type="button" className="link-button danger" onClick={onDelete}>
+          Delete
+        </button>
+      </div>
+      <details className="registration-details">
+        <summary>View registration details</summary>
+        <dl>
+          <dt>Address</dt>
+          {detailValue(registration.address)}
+          <dt>Created</dt>
+          {detailValue(
+            new Date(registration.created_at).toLocaleString(),
+            "monospace",
+          )}
+          <dt>Payment intent ID</dt>
+          {detailValue(
+            paymentIdentifier(registration.stripe_payment_intent_id),
+          )}
+          <dt>Customer ID</dt>
+          {detailValue(paymentIdentifier(registration.stripe_customer_id))}
+          <dt>Subscription ID</dt>
+          {detailValue(paymentIdentifier(registration.stripe_subscription_id))}
+          <dt>Allotments</dt>
+          {detailValue(
+            allocationView(
+              registration.latest_allocation,
+              registration.latest_allocation_format,
+            ),
+          )}
+          <dt>Notes</dt>
+          {detailValue(notesView(registration.notes))}
+        </dl>
+      </details>
+      {editing && (
+        <div className="mobile-editor">
+          <RegistrationEditor
+            registration={registration}
+            onCancel={onCancel}
+            onSaved={onSaved}
+            onError={onError}
+          />
+        </div>
+      )}
+    </article>
+  );
 };

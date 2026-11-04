@@ -26,27 +26,44 @@ assert(missingAddress.status === 201, "missing address should be accepted");
 const missingAddressBody = (await missingAddress.json()) as {
   registration: { address: string | null };
 };
-assert(missingAddressBody.registration.address === null, "missing address should be stored as null");
+assert(
+  missingAddressBody.registration.address === null,
+  "missing address should be stored as null",
+);
 
 const blankAddress = await fetch(`${baseURL}/register`, {
   method: "POST",
   headers: jsonHeaders,
-  body: JSON.stringify({ name: "Smoke Test", email: `blank-${Date.now()}@example.com`, address: "   " }),
+  body: JSON.stringify({
+    name: "Smoke Test",
+    email: `blank-${Date.now()}@example.com`,
+    address: "   ",
+  }),
 });
 assert(blankAddress.status === 201, "blank address should be accepted");
 const blankAddressBody = (await blankAddress.json()) as {
   registration: { address: string | null };
 };
-assert(blankAddressBody.registration.address === null, "blank address should be stored as null");
+assert(
+  blankAddressBody.registration.address === null,
+  "blank address should be stored as null",
+);
 
 const unauthenticated = await fetch(`${baseURL}/registrations`);
-assert(unauthenticated.status === 401, "unauthenticated registrations should return 401");
+assert(
+  unauthenticated.status === 401,
+  "unauthenticated registrations should return 401",
+);
 
 const emailAddress = `smoke-${Date.now()}@example.com`;
 const created = await fetch(`${baseURL}/register`, {
   method: "POST",
   headers: jsonHeaders,
-  body: JSON.stringify({ name: "Smoke Test", email: emailAddress.toUpperCase(), address: "Smoke Street" }),
+  body: JSON.stringify({
+    name: "Smoke Test",
+    email: emailAddress.toUpperCase(),
+    address: "Smoke Street",
+  }),
 });
 assert(created.status === 201, `register returned ${created.status}`);
 const createdBody = (await created.json()) as { registration: { id: number } };
@@ -62,13 +79,20 @@ const cookie = login.headers.get("set-cookie")?.split(";", 1)[0];
 assert(Boolean(cookie), "login did not return a session cookie");
 const authHeaders = { Cookie: cookie! };
 
-const registrations = await fetch(`${baseURL}/registrations`, { headers: authHeaders });
-assert(registrations.status === 200, `authenticated registrations returned ${registrations.status}`);
+const registrations = await fetch(`${baseURL}/registrations`, {
+  headers: authHeaders,
+});
+assert(
+  registrations.status === 200,
+  `authenticated registrations returned ${registrations.status}`,
+);
 const registrationsBody = (await registrations.json()) as {
   registrations: Array<{ id: number; notes: string | null }>;
 };
 assert(
-  registrationsBody.registrations.some((registration) => registration.id === id && registration.notes === null),
+  registrationsBody.registrations.some(
+    (registration) => registration.id === id && registration.notes === null,
+  ),
   "new registration notes should default to null",
 );
 
@@ -85,14 +109,21 @@ assert(edit.status === 200, `edit returned ${edit.status}`);
 const editBody = (await edit.json()) as { notes: string | null };
 assert(editBody.notes === "First line\nSecond line", "notes were not saved");
 
-const registrationsAfterEdit = await fetch(`${baseURL}/registrations`, { headers: authHeaders });
-assert(registrationsAfterEdit.status === 200, `registrations after note edit returned ${registrationsAfterEdit.status}`);
+const registrationsAfterEdit = await fetch(`${baseURL}/registrations`, {
+  headers: authHeaders,
+});
+assert(
+  registrationsAfterEdit.status === 200,
+  `registrations after note edit returned ${registrationsAfterEdit.status}`,
+);
 const registrationsAfterEditBody = (await registrationsAfterEdit.json()) as {
   registrations: Array<{ id: number; notes: string | null }>;
 };
 assert(
   registrationsAfterEditBody.registrations.some(
-    (registration) => registration.id === id && registration.notes === "First line\nSecond line",
+    (registration) =>
+      registration.id === id &&
+      registration.notes === "First line\nSecond line",
   ),
   "saved notes were not returned by the registrations endpoint",
 );
@@ -100,18 +131,107 @@ assert(
 const oversizedNotes = await fetch(`${baseURL}/modify-registration`, {
   method: "POST",
   headers: { ...jsonHeaders, ...authHeaders },
-  body: JSON.stringify({ type: "edit", id: String(id), data: { notes: "x".repeat(5001) } }),
+  body: JSON.stringify({
+    type: "edit",
+    id: String(id),
+    data: { notes: "x".repeat(5001) },
+  }),
 });
 assert(oversizedNotes.status === 400, "oversized notes should return 400");
 
 const clearNotes = await fetch(`${baseURL}/modify-registration`, {
   method: "POST",
   headers: { ...jsonHeaders, ...authHeaders },
-  body: JSON.stringify({ type: "edit", id: String(id), data: { notes: "   " } }),
+  body: JSON.stringify({
+    type: "edit",
+    id: String(id),
+    data: { notes: "   " },
+  }),
 });
-assert(clearNotes.status === 200, `clearing notes returned ${clearNotes.status}`);
+assert(
+  clearNotes.status === 200,
+  `clearing notes returned ${clearNotes.status}`,
+);
 const clearNotesBody = (await clearNotes.json()) as { notes: string | null };
 assert(clearNotesBody.notes === null, "cleared notes should be null");
+
+// Exercise the legacy body first: no format and a total other than 100.
+for (const data of [
+  { allocation: { charityA: 5, charityB: 10 } },
+  { allocation: { charityA: 33, charityB: 67 }, format: "percentage" },
+  { allocation: { charityA: 0, charityB: 100 }, format: "percentage" },
+]) {
+  const response = await fetch(`${baseURL}/modify-registration`, {
+    method: "POST",
+    headers: { ...jsonHeaders, ...authHeaders },
+    body: JSON.stringify({ type: "edit", id: String(id), data }),
+  });
+  assert(
+    response.status === 200,
+    `allocation edit returned ${response.status}`,
+  );
+  const body = await response.json();
+  assert(
+    body.latest_allocation_format === (data.format ?? "dollars"),
+    "allocation format did not round trip",
+  );
+  assert(
+    JSON.stringify(body.latest_allocation) === JSON.stringify(data.allocation),
+    "allocation values changed",
+  );
+}
+for (const data of [
+  { format: "percentage" },
+  { allocation: { a: 99 }, format: "percentage" },
+  { allocation: { a: 100 }, format: null },
+]) {
+  const response = await fetch(`${baseURL}/modify-registration`, {
+    method: "POST",
+    headers: { ...jsonHeaders, ...authHeaders },
+    body: JSON.stringify({ type: "edit", id: String(id), data }),
+  });
+  assert(response.status === 400, "invalid allocation edit should return 400");
+}
+const unpaid = await fetch(`${baseURL}/submit-allocation`, {
+  method: "POST",
+  headers: jsonHeaders,
+  body: JSON.stringify({
+    userId: id,
+    allocation: { a: 100 },
+    format: "percentage",
+  }),
+});
+assert(unpaid.status === 403, "unpaid allocation should return 403");
+const history = await fetch(`${baseURL}/registrations/${id}/allocations`, {
+  headers: authHeaders,
+});
+assert(history.status === 200, `history returned ${history.status}`);
+const historyBody = await history.json();
+assert(
+  historyBody.allocations.length === 3,
+  "allocation history was not preserved",
+);
+assert(
+  historyBody.allocations[0].format === "percentage",
+  "latest history format missing",
+);
+assert(
+  historyBody.allocations[2].format === "dollars",
+  "legacy history should be dollars",
+);
+const allocationList = await fetch(`${baseURL}/registrations`, {
+  headers: authHeaders,
+});
+const allocationListBody = await allocationList.json();
+assert(
+  allocationListBody.registrations.find((row: { id: number }) => row.id === id)
+    ?.latest_allocation_format === "percentage",
+  "list format missing",
+);
+const privateHistory = await fetch(
+  `${baseURL}/registrations/${id}/allocations`,
+);
+assert(privateHistory.status === 401, "history requires authentication");
 
 const deletion = await fetch(`${baseURL}/modify-registration`, {
   method: "POST",
@@ -122,9 +242,18 @@ assert(deletion.status === 200, `delete returned ${deletion.status}`);
 const deletionBody = (await deletion.json()) as { deleted: boolean };
 assert(deletionBody.deleted, "delete response was not marked deleted");
 
-const afterDeletion = await fetch(`${baseURL}/registrations`, { headers: authHeaders });
-const afterDeletionBody = (await afterDeletion.json()) as { registrations: Array<{ id: number; deleted: boolean }> };
-assert(afterDeletionBody.registrations.some((registration) => registration.id === id && registration.deleted), "deleted registration was not retained");
+const afterDeletion = await fetch(`${baseURL}/registrations`, {
+  headers: authHeaders,
+});
+const afterDeletionBody = (await afterDeletion.json()) as {
+  registrations: Array<{ id: number; deleted: boolean }>;
+};
+assert(
+  afterDeletionBody.registrations.some(
+    (registration) => registration.id === id && registration.deleted,
+  ),
+  "deleted registration was not retained",
+);
 
 const logout = await fetch(`${baseURL}/auth/sign-out`, {
   method: "POST",

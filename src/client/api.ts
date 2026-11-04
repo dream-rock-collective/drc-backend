@@ -1,8 +1,12 @@
+import type { AllocationFormat } from "../allocation";
 import type { Registration } from "./types";
 
 const jsonHeaders = { "Content-Type": "application/json" };
 
-export const signIn = async (email: string, password: string): Promise<void> => {
+export const signIn = async (
+  email: string,
+  password: string,
+): Promise<void> => {
   const response = await fetch("/auth/sign-in/email", {
     method: "POST",
     headers: jsonHeaders,
@@ -40,14 +44,19 @@ export const fetchRegistrations = async (): Promise<Registration[]> => {
 export const modifyRegistration = async (
   request:
     | { type: "delete"; id: number }
-    | { type: "edit"; id: number; data: {
-        name?: string;
-        email?: string;
-        address?: string;
-        birthday?: string | null;
-        notes?: string | null;
-        allocation?: Record<string, number>;
-      } },
+    | {
+        type: "edit";
+        id: number;
+        data: {
+          name?: string;
+          email?: string;
+          address?: string;
+          birthday?: string | null;
+          notes?: string | null;
+          format?: AllocationFormat;
+          allocation?: Record<string, number>;
+        };
+      },
 ): Promise<Registration> => {
   const response = await fetch("/modify-registration", {
     method: "POST",
@@ -61,7 +70,9 @@ export const modifyRegistration = async (
   }
 
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
     throw new Error(body?.error ?? "Could not modify registration");
   }
 

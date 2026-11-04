@@ -1,3 +1,5 @@
+import type { AllocationFormat } from "../allocation";
+
 export type Registration = {
   id: number;
   name: string;
@@ -10,6 +12,7 @@ export type Registration = {
   stripe_subscription_id: string | null;
   plan: "once" | "monthly" | "yearly" | null;
   payment_status: "pending" | "paid" | "failed";
+  latest_allocation_format: AllocationFormat | null;
   latest_allocation: Record<string, number> | null;
   created_at: string;
   deleted: boolean;
