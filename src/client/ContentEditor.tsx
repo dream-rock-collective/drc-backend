@@ -352,6 +352,20 @@ export function ContentEditor({
           </button>
         </div>
       </header>
+      <section className="content-page-picker" aria-label="Page selection">
+        <label htmlFor="editor-page">Page</label>
+        <select
+          id="editor-page"
+          value={page}
+          disabled={!content}
+          onChange={(event) => setPage(event.target.value as EditablePage)}
+        >
+          <option value="main">Main</option>
+          <option value="subscriptions">Subscriptions</option>
+          <option value="donations">Donations</option>
+          <option value="success">Success</option>
+        </select>
+      </section>
       {error && (
         <p className="form-error" role="alert">
           {error}
@@ -476,19 +490,6 @@ export function ContentEditor({
           )}
           <div className="content-editor-layout">
             <div className="content-fields">
-              <label htmlFor="editor-page">Page</label>
-              <select
-                id="editor-page"
-                value={page}
-                onChange={(event) =>
-                  setPage(event.target.value as EditablePage)
-                }
-              >
-                <option value="main">Main</option>
-                <option value="subscriptions">Subscriptions</option>
-                <option value="donations">Donations</option>
-                <option value="success">Success</option>
-              </select>
               {page === "main"
                 ? Object.entries(content)
                     .filter(
@@ -557,66 +558,73 @@ export function ContentEditor({
                       key={index}
                       disabled={busy || invalidDraft || snapshot.pending}
                     >
-                      <legend>Section {index + 1}</legend>
-                      <div className="content-actions">
-                        <button
-                          type="button"
-                          className="secondary"
-                          disabled={index === 0}
-                          aria-label={`Move section ${index + 1} up`}
-                          onClick={() =>
-                            setPageContent({
-                              ...selectedContent,
-                              sections: moveSection(
-                                selectedContent.sections,
-                                index,
-                                index - 1,
-                              ),
-                            })
-                          }
-                        >
-                          Move up
-                        </button>
-                        <button
-                          type="button"
-                          className="secondary"
-                          disabled={
-                            index === selectedContent.sections.length - 1
-                          }
-                          aria-label={`Move section ${index + 1} down`}
-                          onClick={() =>
-                            setPageContent({
-                              ...selectedContent,
-                              sections: moveSection(
-                                selectedContent.sections,
-                                index,
-                                index + 1,
-                              ),
-                            })
-                          }
-                        >
-                          Move down
-                        </button>
-                        <button
-                          type="button"
-                          className="secondary"
-                          disabled={
-                            page === "donations" &&
-                            selectedContent.sections.length <= 1
-                          }
-                          aria-label={`Remove section ${index + 1}`}
-                          onClick={() => {
-                            if (window.confirm(`Remove section ${index + 1}?`))
+                      <legend className="section-legend">
+                        Section {index + 1}
+                      </legend>
+                      <div className="section-controls">
+                        <strong aria-hidden="true">Section {index + 1}</strong>
+                        <div className="content-actions">
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={index === 0}
+                            aria-label={`Move section ${index + 1} up`}
+                            onClick={() =>
                               setPageContent({
                                 ...selectedContent,
-                                sections: selectedContent.sections.filter(
-                                  (_, position) => position !== index,
+                                sections: moveSection(
+                                  selectedContent.sections,
+                                  index,
+                                  index - 1,
                                 ),
-                              });
-                          }}
-                        >
-                          Remove
-                        </button>
+                              })
+                            }
+                          >
+                            Move up
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={
+                              index === selectedContent.sections.length - 1
+                            }
+                            aria-label={`Move section ${index + 1} down`}
+                            onClick={() =>
+                              setPageContent({
+                                ...selectedContent,
+                                sections: moveSection(
+                                  selectedContent.sections,
+                                  index,
+                                  index + 1,
+                                ),
+                              })
+                            }
+                          >
+                            Move down
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary section-remove"
+                            disabled={
+                              page === "donations" &&
+                              selectedContent.sections.length <= 1
+                            }
+                            aria-label={`Remove section ${index + 1}`}
+                            onClick={() => {
+                              if (
+                                window.confirm(`Remove section ${index + 1}?`)
+                              )
+                                setPageContent({
+                                  ...selectedContent,
+                                  sections: selectedContent.sections.filter(
+                                    (_, position) => position !== index,
+                                  ),
+                                });
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                       <label>
                         Section {index + 1} title

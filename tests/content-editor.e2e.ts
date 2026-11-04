@@ -14,9 +14,12 @@ test.beforeAll(() => {
 for (const width of [1280, 390]) {
   test(`edit other pages, restore draft, preview and publish at ${width}px`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     let content = structuredClone(initialContent);
+    // Long copy leaves enough scrolling room to exercise sticky controls.
+    content.subscriptions.sections[0]!.body +=
+      "<p>Additional subscription information for readers.</p>".repeat(20);
     let revision = "a".repeat(64);
     let publications = 0;
     const snapshot = () => ({
@@ -83,7 +86,46 @@ for (const width of [1280, 390]) {
     await expect(
       preview.getByRole("heading", { name: "Mail Drops", exact: true }),
     ).toBeVisible();
-    await selectPage.selectOption("donations");
+    await page.screenshot({ path: testInfo.outputPath("page-selector.png") });
+    for (const selected of ["main", "subscriptions", "donations"]) {
+      await selectPage.selectOption(selected);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const controls = page.locator(".section-controls").first();
+      const remove = controls.getByRole("button", {
+        name: "Remove section 1",
+        exact: true,
+      });
+      await expect(remove).toHaveCSS("color", "rgb(141, 48, 33)");
+      expect(
+        await remove.evaluate((element) => {
+          const right = element.parentElement!.getBoundingClientRect().right;
+          return Math.abs(element.getBoundingClientRect().right - right) < 2;
+        }),
+      ).toBe(true);
+      await controls.evaluate((element) =>
+        window.scrollTo(
+          0,
+          window.scrollY + element.getBoundingClientRect().top + 100,
+        ),
+      );
+      await expect
+        .poll(() =>
+          page
+            .locator(".section-editor-heading")
+            .evaluate((element) =>
+              Math.round(element.getBoundingClientRect().top),
+            ),
+        )
+        .toBe(0);
+      await expect
+        .poll(() =>
+          controls.evaluate((element) =>
+            Math.round(element.getBoundingClientRect().top),
+          ),
+        )
+        .toBe(70);
+    }
+    await page.screenshot({ path: testInfo.outputPath("sticky-controls.png") });
     await expect(preview.locator(".allocation-column")).toHaveCount(3);
     await page
       .getByRole("button", { name: "Add section", exact: true })

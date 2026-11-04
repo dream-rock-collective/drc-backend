@@ -815,12 +815,45 @@ body:has(.content-editor-shell) {
   font-weight: 400;
 }
 
+.content-page-picker {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  border: 2px solid var(--line);
+  background: var(--yellow);
+}
+
+.content-page-picker label {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.content-editor-shell .content-page-picker select {
+  flex: 1;
+  width: 100%;
+  min-width: 12rem;
+  min-height: 3.5rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
 .content-toolbar,
 .content-actions,
 .rich-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.7rem;
+}
+
+.content-editor-shell .section-remove {
+  margin-left: auto;
+  border-color: #8d3021;
+  color: #8d3021;
 }
 
 .content-publish,
@@ -838,7 +871,17 @@ body:has(.content-editor-shell) {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  background: var(--blue);
+}
+
+.content-publish > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
 }
 
 .content-publish p {
@@ -909,10 +952,39 @@ body:has(.content-editor-shell) {
 }
 
 .section-editor-heading {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
+  height: 5rem;
+  padding: 0.75rem 0;
+  border-bottom: 2px solid var(--line);
+  background: var(--white);
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.section-controls {
+  position: sticky;
+  top: 5rem;
+  z-index: 2;
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--white);
+}
+
+.section-legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .section-editor-heading h2 {
@@ -986,7 +1058,6 @@ body:has(.content-editor-shell) {
     grid-template-columns: 1fr;
   }
 
-  .content-publish,
   .content-panel,
   .content-conflict {
     padding: 0.75rem;
@@ -997,8 +1068,7 @@ body:has(.content-editor-shell) {
   }
 
   .section-editor-heading {
-    align-items: start;
-    flex-direction: column;
+    gap: 0.5rem;
   }
 }
 
