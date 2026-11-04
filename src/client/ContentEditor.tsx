@@ -332,18 +332,25 @@ export function ContentEditor({
           <p className="eyebrow">Dream Rock Collective</p>
           <div className="content-title-row">
             <h1>Website editor</h1>
-            <select
-              id="editor-page"
-              aria-label="Page"
-              value={page}
-              disabled={!content}
-              onChange={(event) => setPage(event.target.value as EditablePage)}
-            >
-              <option value="main">Main</option>
-              <option value="subscriptions">Subscriptions</option>
-              <option value="donations">Donations</option>
-              <option value="success">Success</option>
-            </select>
+            <div className="content-page-choice">
+              <span className="muted" aria-hidden="true">
+                /
+              </span>
+              <label htmlFor="editor-page">Page</label>
+              <select
+                id="editor-page"
+                value={page}
+                disabled={!content}
+                onChange={(event) =>
+                  setPage(event.target.value as EditablePage)
+                }
+              >
+                <option value="main">Main</option>
+                <option value="subscriptions">Subscriptions</option>
+                <option value="donations">Donations</option>
+                <option value="success">Success</option>
+              </select>
+            </div>
           </div>
           <p>
             Edit website pages. Drafts stay in this browser until published.
