@@ -94,6 +94,14 @@ use the signing secret it prints as `STRIPE_WEBHOOK_SECRET`.
 
 The React admin SPA is available at `http://localhost:6942/login`.
 
+**Export CSV** opens a modal with payment-plan and column checkboxes. It exports
+only active registrations matching the selected plans, with any combination of
+all data columns shown in the registration table, including Plan. Allotments
+are exported as JSON. “No payment” means no plan; payment status
+does not affect the filter. All options start selected. Successful exports save
+the selection in this browser's local storage; Cancel discards changes. JSON
+export is no longer available.
+
 Authenticated API endpoints:
 
 - `GET /registrations` returns active and soft-deleted records, including each
@@ -103,6 +111,19 @@ Authenticated API endpoints:
 
 Migrations are forward-only and run explicitly with `bun run migrations`.
 Docker does not initialize the schema automatically.
+
+## Tests
+
+Run `bun run test` for unit tests and `bun run lint` for CSS and TypeScript checks.
+For modal browser tests, install Chromium with `bunx playwright install chromium`,
+then run `bun run test:e2e`. These tests start their own frontend server and mock
+the registration API; no database is required. `bun run smoke-api` checks a running
+API with a seeded administrator and writes test registrations, so use a disposable
+database.
+
+The GitHub Actions **Tests** workflow runs on pull requests and every push to
+`main`, including merges. It runs lint, unit tests, the frontend build, modal browser tests, and API
+smoke tests against an isolated PostgreSQL service with test-only credentials.
 
 ## Site content publishing
 

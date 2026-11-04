@@ -1,0 +1,76 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: collective_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d collective_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://test:test@localhost:5432/collective_test
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: ci-admin-password-for-tests
+      BETTER_AUTH_SECRET: ci-only-secret-for-isolated-tests-1234567890
+      BETTER_AUTH_URL: http://localhost:6942
+      SMOKE_BASE_URL: http://localhost:6942
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Lint and typecheck
+        run: bun run lint
+      - name: Unit tests
+        run: bun run test
+      - name: Build frontend
+        run: bun run build
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+      - name: Modal browser tests
+        run: bun run test:e2e
+      - name: Prepare test database
+        run: |
+          bun run migrations
+          bun run seed-admin
+      - name: API smoke tests
+        run: |
+          bun run start > /tmp/drc-api.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:6942/health > /dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then
+            cat /tmp/drc-api.log
+            exit 1
+          fi
+          bun run smoke-api || { cat /tmp/drc-api.log; exit 1; }
