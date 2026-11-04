@@ -336,9 +336,9 @@ export function ContentEditor({
               <span className="muted" aria-hidden="true">
                 /
               </span>
-              <label htmlFor="editor-page">Page</label>
               <select
                 id="editor-page"
+                aria-label="Page"
                 value={page}
                 disabled={!content}
                 onChange={(event) =>

@@ -835,11 +835,6 @@ body:has(.content-editor-shell) {
   max-width: 100%;
 }
 
-.content-page-choice label {
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
 .content-editor-shell .content-title-row select {
   width: auto;
   padding: 0.2rem 0.25rem;
