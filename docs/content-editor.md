@@ -6,7 +6,8 @@ selector. All content stays in the registration-site checkout at
 Images come from that checkout's existing `public/` assets; uploads are excluded.
 
 Main keeps its existing Join Pane, Member Pane, Messages, Page Sections, and
-Footer controls. Subscriptions exposes a title, rich-text introduction, and an
+Footer controls. Member Pane editing is temporarily disabled; its saved content
+and public-page behavior stay unchanged. Subscriptions exposes a title, rich-text introduction, and an
 ordered list of title/body/optional-image sections, plus plain-text labels for
 One Time, Monthly, and Yearly. These labels do not change checkout plan IDs or prices. Donations exposes a title,
 rich-text introduction, and ordered charity sections containing editable `key`,
@@ -113,7 +114,7 @@ must match the admin browser origin for sign-in, publishing, and preview.
 
 ## Manual acceptance checklist
 
-1. Open Registrations, choose Website editor, and confirm the displayed mode.
+1. Open Registrations, choose Editor, and confirm the displayed mode.
 2. Edit a join label and section body. Try bold (Ctrl+B or Cmd+B), italic
    (Ctrl+I or Cmd+I), links, and lists. Reload
    and confirm the browser restores the unpublished draft.

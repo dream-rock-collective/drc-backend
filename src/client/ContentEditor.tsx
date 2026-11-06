@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "./api";
 import { RichTextEditor } from "./RichTextEditor";
+import { ViewNavigation } from "./ViewNavigation";
 import { ContentPreview } from "./ContentPreview";
 import { PublishReview } from "./PublishReview";
 import {
@@ -282,7 +283,12 @@ export function ContentEditor({
             key={key}
             label={label(nextPath)}
             value={value}
-            disabled={busy || invalidDraft || Boolean(snapshot?.pending)}
+            disabled={
+              nextPath[0] === "member" ||
+              busy ||
+              invalidDraft ||
+              Boolean(snapshot?.pending)
+            }
             onChange={(next) => {
               if (content)
                 setContent(replaceCopyField(content, nextPath, next));
@@ -294,7 +300,12 @@ export function ContentEditor({
           {label(nextPath)}
           <textarea
             rows={value.length > 100 ? 3 : 1}
-            disabled={busy || invalidDraft || Boolean(snapshot?.pending)}
+            disabled={
+              nextPath[0] === "member" ||
+              busy ||
+              invalidDraft ||
+              Boolean(snapshot?.pending)
+            }
             value={value}
             onChange={(event) => {
               if (content)
@@ -318,6 +329,9 @@ export function ContentEditor({
     <details className="content-panel" key={key}>
       <summary>{label([key])}</summary>
       <div className="content-copy-fields">
+        {key === "member" && (
+          <p className="muted">Member Pane editing is temporarily disabled.</p>
+        )}
         {!Array.isArray(fields) && copyFields(fields as CopyFields, [key])}
       </div>
     </details>
@@ -342,7 +356,10 @@ export function ContentEditor({
         <div>
           <p className="eyebrow">Dream Rock Collective</p>
           <div className="content-title-row">
-            <h1>Website editor</h1>
+            <ViewNavigation
+              active="editor"
+              onLeaveEditor={() => void leave()}
+            />
             <div className="content-page-choice">
               <span className="muted" aria-hidden="true">
                 /
@@ -368,13 +385,6 @@ export function ContentEditor({
           </p>
         </div>
         <div className="toolbar content-toolbar">
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => void leave()}
-          >
-            Registrations
-          </button>
           <button
             type="button"
             className="secondary"

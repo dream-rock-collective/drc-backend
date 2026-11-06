@@ -81,6 +81,19 @@ for (const width of [1280, 390]) {
     });
     page.on("dialog", (dialog) => dialog.accept());
     await page.goto("/editor");
+    const navigation = page.getByRole("navigation", { name: "Admin views" });
+    await expect(
+      navigation.getByRole("link", { name: "Editor", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await expect(
+      navigation.getByRole("link", { name: "Registrations" }),
+    ).toHaveCSS("color", "rgb(136, 136, 136)");
+    await expect(
+      navigation.getByRole("link", { name: "Editor", exact: true }),
+    ).toHaveCSS("font-weight", "400");
+    await expect(
+      navigation.getByRole("link", { name: "Editor", exact: true }),
+    ).toHaveCSS("border-bottom-color", "rgb(5, 5, 5)");
     const selectPage = page.getByLabel("Page", { exact: true });
     const preview = page.frameLocator('iframe[title="Website page preview"]');
     await expect(
@@ -93,6 +106,18 @@ for (const width of [1280, 390]) {
         .filter({ has: page.getByText(name, { exact: true }) });
       const heading = panel.locator("summary");
       await heading.click();
+      if (name === "Member Pane") {
+        await expect(
+          panel.getByText("Member Pane editing is temporarily disabled."),
+        ).toBeVisible();
+        for (const field of await panel.locator("textarea, button").all()) {
+          await expect(field).toBeDisabled();
+        }
+        await expect(panel.locator(".rich-input")).toHaveAttribute(
+          "contenteditable",
+          "false",
+        );
+      }
       await expect(heading).toHaveCSS("position", "sticky");
       if (name !== "Footer") {
         await page.evaluate(() => window.scrollTo(0, 0));

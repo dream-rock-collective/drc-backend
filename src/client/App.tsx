@@ -12,6 +12,7 @@ import {
 } from "./export";
 import type { ExportSelection } from "./export";
 import { ContentEditor } from "./ContentEditor";
+import { ViewNavigation } from "./ViewNavigation";
 
 const cacheKey = "dreamrock:registrations";
 const backupTimestampKey = "dreamrock:registrations:last-backup";
@@ -314,10 +315,7 @@ const Dashboard = ({
       <header className="page-header">
         <div>
           <p className="eyebrow">Dream Rock Collective</p>
-          <div className="page-title-row">
-            <img className="admin-mark" src="/rock.png" alt="" />
-            <h1>Registrations</h1>
-          </div>
+          <ViewNavigation active="registrations" />
         </div>
         <div className="toolbar">
           <button
@@ -327,15 +325,6 @@ const Dashboard = ({
             onClick={() => setExportOpen(true)}
           >
             Export CSV
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              window.location.href = "/editor";
-            }}
-          >
-            Website editor
           </button>
           <button
             type="button"

@@ -135,18 +135,6 @@ button:disabled {
   margin-bottom: 1.3rem;
 }
 
-.page-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.admin-mark {
-  width: 42px;
-  height: 42px;
-  object-fit: contain;
-}
-
 .eyebrow {
   margin: 0;
   color: var(--ink);
@@ -319,7 +307,7 @@ button.secondary {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 200px));
   gap: 0.8rem;
   margin-bottom: 1.25rem;
 }
@@ -746,15 +734,6 @@ textarea {
 }
 
 @media (max-width: 420px) {
-  .page-title-row {
-    gap: 0.5rem;
-  }
-
-  .admin-mark {
-    width: 34px;
-    height: 34px;
-  }
-
   .analytics-card {
     padding: 0.65rem;
   }
@@ -824,8 +803,46 @@ body:has(.content-editor-shell) {
   font-size: clamp(1.75rem, 3vw, 2.5rem);
 }
 
-.content-title-row h1 {
+.view-navigation {
+  display: inline-flex;
+  gap: 0.4em;
+  max-width: 100%;
+  margin-top: 0.5rem;
+  font-size: clamp(1.15rem, 3.5vw, 3.4rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.view-navigation a {
+  display: flex;
+  align-items: center;
+  padding-bottom: 0.15em;
+  border-bottom: 4px solid transparent;
+  color: #888;
+  text-decoration: none;
+}
+
+.view-navigation a[aria-current="page"] {
+  border-bottom-color: currentcolor;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.view-navigation a[href="/editor"] {
+  color: var(--ink);
+  font-weight: 400;
+}
+
+.view-navigation a:focus-visible {
+  outline: 2px solid var(--line);
+  outline-offset: 3px;
+}
+
+.view-navigation h1 {
   font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
 }
 
 .content-page-choice {
