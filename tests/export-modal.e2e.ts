@@ -62,6 +62,9 @@ test("defaults, cancellation, and keyboard focus", async ({ page }) => {
     navigation.getByRole("link", { name: "Registrations" }),
   ).toHaveCSS("border-bottom-width", "4px");
   const cards = page.locator(".analytics-card");
+  for (const price of await cards.locator(".analytics-price").all()) {
+    await expect(price).toHaveCSS("color", "rgb(85, 85, 85)");
+  }
   const firstCard = await cards.nth(0).boundingBox();
   const secondCard = await cards.nth(1).boundingBox();
   expect(secondCard!.x - firstCard!.x - firstCard!.width).toBeLessThan(20);

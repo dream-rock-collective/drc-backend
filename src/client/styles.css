@@ -344,7 +344,7 @@ button.secondary {
 }
 
 .analytics-price {
-  color: #777 !important;
+  color: var(--muted) !important;
   font-size: 0.78rem !important;
   font-weight: 800;
 }
@@ -757,7 +757,6 @@ body:has(.content-editor-shell) {
 }
 
 .content-editor-shell {
-  max-width: 1600px;
   margin: 0 auto;
   overflow: visible;
   font-weight: 400;
@@ -976,6 +975,7 @@ details.content-panel > summary {
 }
 
 .content-editor-shell textarea {
+  field-sizing: content;
   min-height: 2.7rem;
   resize: vertical;
 }

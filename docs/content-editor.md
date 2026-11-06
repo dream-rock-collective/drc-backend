@@ -105,6 +105,7 @@ docker compose exec backend sh -c 'cd /site && bun install --frozen-lockfile'
 ```
 
 The editor updates the preview as you type without rebuilding for each edit.
+The editor panes fill the available window width, expanding as you zoom out.
 Use Desktop/Mobile to inspect widths, and reload the editor after site code or
 assets change. The preview follows the selected page without payment or storage
 side effects. Retry preview is available when loading fails. Preview errors preserve the last valid rendered page. Registration,
