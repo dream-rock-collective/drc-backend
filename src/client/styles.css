@@ -777,7 +777,6 @@ body:has(.content-editor-shell) {
 .content-editor-shell h3,
 .content-editor-shell summary,
 .content-editor-shell legend,
-.content-editor-shell .eyebrow,
 .content-editor-shell .content-publish strong {
   font-weight: 600;
 }
@@ -796,7 +795,7 @@ body:has(.content-editor-shell) {
 .content-title-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: start;
   gap: 0.35rem 1rem;
   margin-bottom: 0.6rem;
   font-size: clamp(1.75rem, 3vw, 2.5rem);
@@ -825,7 +824,7 @@ body:has(.content-editor-shell) {
 .view-navigation a[aria-current="page"] {
   border-bottom-color: currentcolor;
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 400;
 }
 
 .view-navigation a[href="/editor"] {

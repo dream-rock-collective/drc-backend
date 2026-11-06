@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { signOut } from "./api";
 import { RichTextEditor } from "./RichTextEditor";
 import { ViewNavigation } from "./ViewNavigation";
+import { BackupStatus } from "./BackupStatus";
 import { ContentPreview } from "./ContentPreview";
 import { PublishReview } from "./PublishReview";
 import {
@@ -59,8 +60,10 @@ const same = (first: EditorContent, second: EditorContent) =>
 
 export function ContentEditor({
   onUnauthenticated,
+  lastBackup,
 }: {
   onUnauthenticated: () => void;
+  lastBackup: string | null;
 }) {
   const [page, setPage] = useState<EditablePage>("main");
   const [snapshot, setSnapshot] = useState<ContentSnapshot | null>(null);
@@ -352,6 +355,7 @@ export function ContentEditor({
 
   return (
     <main className="page-shell content-editor-shell">
+      <BackupStatus value={lastBackup} />
       <header className="page-header">
         <div>
           <p className="eyebrow">Dream Rock Collective</p>

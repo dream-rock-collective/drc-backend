@@ -24,6 +24,48 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
+for (const width of [390, 1440]) {
+  test(`backup timestamp and navigation stay aligned between pages at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route("**/registrations", (route) =>
+      route.fulfill({ json: { registrations: [] } }),
+    );
+    await page.goto("/");
+    await expect(page.locator(".backup-status")).not.toHaveText(
+      "Last local backup: Never",
+    );
+    await page.evaluate(() => document.fonts.ready);
+    const timestamp = await page.locator(".backup-status").textContent();
+    const measure = () =>
+      page
+        .locator(".backup-status, .eyebrow, .view-navigation a")
+        .evaluateAll((elements) =>
+          elements.map((element) => {
+            const rect = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return {
+              x: rect.x,
+              y: rect.y,
+              width: element.tagName === "A" ? rect.width : undefined,
+              height: rect.height,
+              font: style.font,
+              letterSpacing: style.letterSpacing,
+            };
+          }),
+        );
+    const before = await measure();
+    await page.getByRole("link", { name: "Editor", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Live preview" }),
+    ).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page.locator(".backup-status")).toHaveText(timestamp!);
+    expect(await measure()).toEqual(before);
+  });
+}
+
 test("editor panes keep growing beyond 1600px and remain equally sized", async ({
   page,
 }) => {
