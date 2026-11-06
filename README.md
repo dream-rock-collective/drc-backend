@@ -12,6 +12,7 @@ Create a `.env` file:
 POSTGRES_DB=collective_admin
 POSTGRES_USER=admin
 POSTGRES_PASSWORD=change-this-password
+POSTGRES_PORT=5432
 DATABASE_URL=postgres://admin:change-this-password@localhost:5432/collective_admin
 REGISTRATION_SITE_ORIGIN=http://localhost:5173
 ADMIN_EMAIL=admin@example.com
@@ -35,6 +36,10 @@ docker compose up -d --build
 ```
 
 The API and admin SPA listen on `http://localhost:6942`.
+
+If port 5432 is already in use, set `POSTGRES_PORT=5433` in `.env` and
+update the port in `DATABASE_URL` to `5433` for local migrations and seeding.
+The backend container continues to connect to Postgres internally on port 5432.
 
 Deployments use the same sequence through:
 
