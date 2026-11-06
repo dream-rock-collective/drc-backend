@@ -198,6 +198,26 @@ for (const width of [1280, 390]) {
       preview.getByRole("button", { name: "Submit", exact: true }),
     ).toBeDisabled();
     await selectPage.selectOption("subscriptions");
+    const bodyEditor = page.getByRole("textbox", {
+      name: "Section 1 body",
+      exact: true,
+    });
+    await bodyEditor.fill("Keyboard formatting");
+    await bodyEditor.press("Control+a");
+    await bodyEditor.press("Control+b");
+    await bodyEditor.press("Control+i");
+    await expect(bodyEditor.locator("b, strong")).toHaveText(
+      "Keyboard formatting",
+    );
+    await expect(bodyEditor.locator("i, em")).toHaveText("Keyboard formatting");
+    const boldButton = bodyEditor
+      .locator("..")
+      .getByRole("button", { name: "Bold", exact: true });
+    await boldButton.hover();
+    await expect(boldButton).toHaveCSS(
+      "transform",
+      "matrix(1, 0, 0, 1, 0, -1)",
+    );
     await page
       .getByRole("textbox", { name: "Subscriptions / Title", exact: true })
       .fill("Choose your mail");
@@ -244,6 +264,10 @@ for (const width of [1280, 390]) {
       page.getByText("Restored your unpublished browser draft."),
     ).toBeVisible();
     await selectPage.selectOption("subscriptions");
+    await expect(bodyEditor.locator("strong")).toHaveText(
+      "Keyboard formatting",
+    );
+    await expect(bodyEditor.locator("em")).toHaveText("Keyboard formatting");
     await expect(
       page.getByRole("textbox", { name: "Subscriptions / Title", exact: true }),
     ).toHaveValue("Choose your mail");

@@ -114,7 +114,8 @@ must match the admin browser origin for sign-in, publishing, and preview.
 ## Manual acceptance checklist
 
 1. Open Registrations, choose Website editor, and confirm the displayed mode.
-2. Edit a join label and section body. Try bold, italic, links, and lists. Reload
+2. Edit a join label and section body. Try bold (Ctrl+B or Cmd+B), italic
+   (Ctrl+I or Cmd+I), links, and lists. Reload
    and confirm the browser restores the unpublished draft.
 3. Add a section, move it, choose an existing image, and edit its alt text.
    Remove a section and check its confirmation. Check the live preview at both

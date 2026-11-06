@@ -47,6 +47,8 @@ Deployments use the same sequence through:
 ./scripts/deploy.sh
 ```
 
+After startup, the script lists each running service and its container ports and host port mappings.
+
 ## Run locally
 
 ```sh

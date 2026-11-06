@@ -204,6 +204,14 @@ export function RichTextEditor({
         contentEditable={!disabled}
         suppressContentEditableWarning
         onInput={update}
+        onKeyDown={(event) => {
+          if (disabled || event.altKey || !(event.ctrlKey || event.metaKey))
+            return;
+          const key = event.key.toLowerCase();
+          if (key !== "b" && key !== "i") return;
+          event.preventDefault();
+          command(key === "b" ? "bold" : "italic");
+        }}
         onPaste={(event) => {
           event.preventDefault();
           command("insertText", event.clipboardData.getData("text/plain"));

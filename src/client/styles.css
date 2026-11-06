@@ -1030,6 +1030,12 @@ details.content-panel > summary {
   font-size: 1rem;
 }
 
+.rich-toolbar button:hover:not(:disabled),
+.rich-toolbar button:focus-visible:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: -4px 4px 0 var(--line);
+}
+
 .rich-toolbar svg {
   width: 1.1rem;
   height: 1.1rem;
