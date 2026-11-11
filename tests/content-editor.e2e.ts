@@ -300,6 +300,7 @@ for (const width of [1280, 390]) {
     await page
       .getByRole("button", { name: "Add section", exact: true })
       .click();
+    await page.getByRole("button", { name: "Default", exact: true }).click();
     await page
       .getByLabel("Section 2 title", { exact: true })
       .fill("Extra information");
@@ -307,12 +308,28 @@ for (const width of [1280, 390]) {
     await page
       .getByRole("textbox", { name: "Success / Title", exact: true })
       .fill("Thank you, friend!");
-    await expect(
-      page.getByRole("button", { name: "Add section", exact: true }),
-    ).toHaveCount(0);
+    await addSection.click();
+    await page.getByRole("button", { name: "Default", exact: true }).click();
+    await page
+      .getByLabel("Section 1 title", { exact: true })
+      .fill("Next steps");
     await expect(
       preview.getByRole("heading", { name: "Thank you, friend!" }),
     ).toBeVisible();
+    await expect(
+      preview.getByRole("heading", { name: "Next steps" }),
+    ).toBeVisible();
+    for (const selected of ["success", "main", "subscriptions", "donations"]) {
+      await selectPage.selectOption(selected);
+      await expect(addSection.locator(".section-type-arrow")).toBeVisible();
+      await addSection.click();
+      await page.getByRole("button", { name: "Divider", exact: true }).click();
+      await expect(preview.locator("hr.section-divider")).toHaveCSS(
+        "height",
+        "2px",
+      );
+    }
+    await expect(preview.locator(".allocation-column")).toHaveCount(3);
     await page.reload();
     await expect(
       page.getByText("Restored your unpublished browser draft."),
@@ -350,14 +367,18 @@ for (const width of [1280, 390]) {
       "local-charity",
       "otayMesaDetentionResistance",
       undefined,
+      undefined,
     ]);
-    expect(content.subscriptions.sections).toHaveLength(2);
+    expect(content.subscriptions.sections).toHaveLength(3);
     expect(content.subscriptions.planLabels).toEqual({
       once: "Single letter",
       monthly: "Every month",
       yearly: "A full year",
     });
     expect(content.success.title).toBe("Thank you, friend!");
+    expect(content.success).toMatchObject({
+      sections: [{ title: "Next steps" }, { type: "divider" }],
+    });
     await page.reload();
     await expect(
       page.getByText("No unpublished changes", { exact: true }),

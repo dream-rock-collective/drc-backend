@@ -9,12 +9,12 @@ Main keeps its existing Join Pane, Member Pane, Messages, Page Sections, and
 Footer controls. Member Pane editing is temporarily disabled; its saved content
 and public-page behavior stay unchanged. Subscriptions exposes a title, rich-text introduction, and an
 ordered list of title/body/optional-image sections, plus plain-text labels for
-One Time, Monthly, and Yearly. These labels do not change checkout plan IDs or prices. Donations exposes a title,
-rich-text introduction, and an ordered list of sections. Open Add section and
-choose Default or Charity. Both types have a title, rich-text body, and
-optional image. Charity sections also have a required key and an optional
-HTTP(S) URL. Success
-exposes only its heading. Sections can be added, removed, and moved up/down;
+One Time, Monthly, and Yearly. These labels do not change checkout plan IDs or
+prices. Donations exposes a title and rich-text introduction. Success exposes
+its heading. On every page, Add section offers Default and Divider. Default
+sections have a title, rich-text body, and optional image. Dividers render as
+2px horizontal lines. Donations also offers Charity, which adds a required key
+and optional HTTP(S) URL. Sections can be added, removed, and moved up/down;
 Donations requires at least one charity and unique keys containing only letters,
 digits, underscores, or hyphens (maximum 100 characters).
 
@@ -28,7 +28,8 @@ The percentage API migration is deliberately excluded.
 
 The existing root fields stay unchanged. New sibling objects are
 `subscriptions: { title, body, planLabels: { once, monthly, yearly }, sections }`,
-`donations: { title, body, sections }`, and `success: { title }`.
+`donations: { title, body, sections }`, and `success: { title, sections? }`.
+Dividers are stored as `{ type: "divider" }` and rendered by the public site.
 Old documents receive defaults for missing page objects. Deploy the matching
 registration-site validator/renderers in the publisher checkout before the new
 admin code. The deployed legacy allocation API must accept arbitrary charity

@@ -351,6 +351,42 @@ describe("site content HTTP boundary", () => {
     ).toBe(400);
   });
 
+  test("publishes dividers on every page and validates Success images", async () => {
+    const body = await requestBody();
+    for (const page of ["main", "subscriptions", "donations", "success"]) {
+      const fields = (page === "main" ? body.content : body.content[page]) as {
+        sections?: Array<Record<string, unknown>>;
+      };
+      fields.sections = [...(fields.sections ?? []), { type: "divider" }];
+    }
+    const success = body.content["success"] as {
+      sections: Array<Record<string, unknown>>;
+    };
+    success.sections.push({
+      title: "Next steps",
+      body: "<p>More information</p>",
+      image: { src: "/missing.png", alt: "Missing" },
+    });
+    expect(
+      (
+        await app().request(
+          `${origin}/api/site-content/publish`,
+          publishRequest(body),
+        )
+      ).status,
+    ).toBe(400);
+    success.sections[1]!["image"] = {
+      src: "/leeya-appleby.jpeg",
+      alt: "Existing",
+    };
+    const response = await app().request(
+      `${origin}/api/site-content/publish`,
+      publishRequest(body),
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).content).toEqual(body.content);
+  });
+
   test("blocks stale content rather than overwriting newer edits", async () => {
     const body = await requestBody();
     await writeFile(

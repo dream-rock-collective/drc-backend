@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { database } from "../db";
 import { logger } from "../logger";
+import { isStripeMocked } from "../stripe-mock";
 import {
   allocationSubmissionSchema,
   type AllocationFormat,
@@ -87,7 +88,7 @@ allocationsRoute.post("/submit-allocation", async (c) => {
       });
       return c.json({ error: "Registration not found" }, 404);
     }
-    if (registration.payment_status !== "paid") {
+    if (registration.payment_status !== "paid" && !isStripeMocked()) {
       logger.warn(
         "[allocations] allocation rejected: payment is not complete",
         {

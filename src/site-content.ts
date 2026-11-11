@@ -89,7 +89,7 @@ function validateImages(content: unknown, available: string[]): void {
   )
     throw new SitePublishError("Invalid content sections", 400);
   const sections: unknown[] = [...content.sections];
-  for (const page of ["subscriptions", "donations"]) {
+  for (const page of ["subscriptions", "donations", "success"]) {
     const nested: unknown = (content as Record<string, unknown>)[page];
     if (
       nested &&

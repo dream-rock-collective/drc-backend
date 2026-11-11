@@ -22,6 +22,7 @@ test.skipIf(!testUrl)(
     });
     app.route("/", allocationsRoute);
     app.route("/", registrationsRoute);
+    const originalStripeMode = process.env["STRIPE_MODE"];
     let id: number | undefined;
     try {
       await sql.begin(async (transaction) => {
@@ -68,17 +69,39 @@ test.skipIf(!testUrl)(
         (await app.request("/modify-registration", { method: "POST" })).status,
       ).toBe(401);
       await sql`UPDATE registrations SET payment_status = 'pending' WHERE id = ${id!}`;
-      const response = await app.request("/submit-allocation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: id,
-          allocation: { a: 100 },
-          format: "percentage",
-        }),
+      const submitAllocation = () =>
+        app.request("/submit-allocation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: id,
+            allocation: { a: 100 },
+            format: "percentage",
+          }),
+        });
+      process.env["STRIPE_MODE"] = "CONNECTED";
+      expect((await submitAllocation()).status).toBe(403);
+
+      process.env["STRIPE_MODE"] = "MOCKED";
+      const response = await submitAllocation();
+      expect(response.status).toBe(201);
+      const { allocationId } = await response.json();
+      const [saved] = await sql`
+        SELECT allocation, format, payment_status
+        FROM allocations JOIN registrations ON registrations.id = allocations.registration_id
+        WHERE allocations.id = ${allocationId} AND registrations.id = ${id!}
+      `;
+      expect(saved).toMatchObject({
+        allocation: { a: 100 },
+        format: "percentage",
+        payment_status: "pending",
       });
-      expect(response.status).toBe(403);
     } finally {
+      if (originalStripeMode === undefined) {
+        delete process.env["STRIPE_MODE"];
+      } else {
+        process.env["STRIPE_MODE"] = originalStripeMode;
+      }
       if (id !== undefined) {
         await sql`DELETE FROM allocations WHERE registration_id = ${id}`;
         await sql`DELETE FROM registrations WHERE id = ${id}`;

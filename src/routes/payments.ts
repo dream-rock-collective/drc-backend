@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { z } from "zod";
 import { database } from "../db";
 import { logger } from "../logger";
-import { stripeMock } from "../stripe-mock";
+import { isStripeMocked, stripeMock } from "../stripe-mock";
 
 export const paymentsRoute = new Hono();
 
@@ -14,8 +14,6 @@ const checkoutSchema = z.object({
 });
 
 type Plan = z.infer<typeof planSchema>;
-
-const isStripeMocked = () => process.env["STRIPE_MODE"]?.trim() === "MOCKED";
 
 type StripeMode = "live" | "test" | "unknown";
 

@@ -1018,7 +1018,21 @@ details.content-panel > summary {
 }
 
 .section-type-arrow {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
   margin-left: 0.4em;
+  border-right: 2px solid currentcolor;
+  border-bottom: 2px solid currentcolor;
+  vertical-align: 0.15em;
+  transform: rotate(45deg);
+}
+
+.section-divider {
+  height: 2px;
+  margin: 0;
+  border: 0;
+  background: var(--line);
 }
 
 .section-type-options button {

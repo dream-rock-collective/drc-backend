@@ -91,21 +91,22 @@ curl -X POST http://localhost:6942/register \
 The public payment endpoints are:
 
 - `POST /create-checkout-session` with `{ "userId": 42, "plan": "once" | "monthly" | "yearly" }`; returns the hosted Stripe Checkout URL.
-- `POST /submit-allocation` with `{ "userId": "42", "allocation": { "charityKey": 100 }, "format": "percentage" }`; stores an allocation submission for a paid registration.
+- `POST /submit-allocation` with `{ "userId": "42", "allocation": { "charityKey": 100 }, "format": "percentage" }`; stores an allocation submission.
 - `POST /webhooks/stripe`; configure Stripe to send signed events here. The webhook records completed Checkout Sessions on the registration.
 
 Checkout success returns to the registration site's `/allocate-payment/` page.
 Allocation keys are frontend-owned. Include `format: "dollars" | "percentage"`
 explicitly in new clients; omitted format is legacy compatibility and means dollars.
 Values must be nonnegative integers. Percentage allocations must total exactly
-100; dollar totals remain unrestricted. The registration must have been paid.
+100; dollar totals remain unrestricted. In `CONNECTED` mode, the registration
+must have been paid.
 See the [allocation contract](docs/registration-site-api.md#donation-allocations)
 for history and admin editing.
 
 Set `STRIPE_MODE=MOCKED` in `.env` to try the checkout redirect without Stripe
 credentials. Edit the dummy responses in [src/stripe-mock.ts](src/stripe-mock.ts).
-Mock checkout leaves payment status unchanged, so allocation submission still
-requires a paid registration. Restart the backend after changing the mode
+Mock mode lets unpaid registrations submit allocations and leaves their payment
+status unchanged. Restart the backend after changing the mode
 (recreate the backend container when using Compose).
 
 In the default `CONNECTED` mode, use Stripe test-mode keys and prices for local

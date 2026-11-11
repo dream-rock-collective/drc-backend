@@ -114,6 +114,9 @@ export function PublishReview({
         )}
       </div>
       <footer className="content-actions">
+        <button type="button" onClick={onConfirm}>
+          {pending ? "Confirm retry" : "Confirm publish"}
+        </button>
         <button
           type="button"
           className="secondary"
@@ -121,9 +124,6 @@ export function PublishReview({
           onClick={onCancel}
         >
           Keep editing
-        </button>
-        <button type="button" onClick={onConfirm}>
-          {pending ? "Confirm retry" : "Confirm publish"}
         </button>
       </footer>
     </dialog>

@@ -1,21 +1,25 @@
 export type CopyFields = { [key: string]: string | CopyFields };
-export type ContentSection = {
-  title: string;
-  body: string;
-  key?: string;
-  url?: string;
-  image?: { src: string; alt: string };
-};
+export type ContentSection =
+  | { type: "divider"; key?: never }
+  | {
+      type?: never;
+      title: string;
+      body: string;
+      key?: string;
+      url?: string;
+      image?: { src: string; alt: string };
+    };
 export type SectionPage = {
   title: string;
   body: string;
   sections: ContentSection[];
   planLabels?: Record<"once" | "monthly" | "yearly", string>;
 };
+type SuccessPage = { title: string; sections?: ContentSection[] };
 export type EditablePage = "main" | "subscriptions" | "donations" | "success";
 export type EditorContent = {
   sections: ContentSection[];
-  [key: string]: CopyFields | ContentSection[] | SectionPage;
+  [key: string]: CopyFields | ContentSection[] | SectionPage | SuccessPage;
 };
 export type ContentSnapshot = {
   content: EditorContent;
@@ -42,14 +46,19 @@ function validSections(value: unknown): boolean {
     value.every(
       (section) =>
         record(section) &&
-        typeof section["title"] === "string" &&
-        typeof section["body"] === "string" &&
-        (section["key"] === undefined || typeof section["key"] === "string") &&
-        (section["url"] === undefined || typeof section["url"] === "string") &&
-        (section["image"] === undefined ||
-          (record(section["image"]) &&
-            typeof section["image"]["src"] === "string" &&
-            typeof section["image"]["alt"] === "string")),
+        (section["type"] === "divider"
+          ? Object.keys(section).length === 1
+          : section["type"] === undefined &&
+            typeof section["title"] === "string" &&
+            typeof section["body"] === "string" &&
+            (section["key"] === undefined ||
+              typeof section["key"] === "string") &&
+            (section["url"] === undefined ||
+              typeof section["url"] === "string") &&
+            (section["image"] === undefined ||
+              (record(section["image"]) &&
+                typeof section["image"]["src"] === "string" &&
+                typeof section["image"]["alt"] === "string"))),
     )
   );
 }
@@ -60,6 +69,12 @@ export function parseEditorContent(value: unknown): EditorContent {
     Object.entries(value).some(([key, item]) => {
       if (key === "sections") return false;
       const planLabels = record(item) ? item["planLabels"] : undefined;
+      if (key === "success")
+        return (
+          !record(item) ||
+          typeof item["title"] !== "string" ||
+          (item["sections"] !== undefined && !validSections(item["sections"]))
+        );
       if (key === "subscriptions" || key === "donations")
         return (
           !record(item) ||
