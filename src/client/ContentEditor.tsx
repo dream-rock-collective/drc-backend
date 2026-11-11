@@ -610,6 +610,11 @@ export function ContentEditor({
                       }
                     >
                       Add section
+                      {page === "donations" && (
+                        <span className="section-type-arrow" aria-hidden="true">
+                          ▾
+                        </span>
+                      )}
                     </button>
                     {page === "donations" && (
                       <div

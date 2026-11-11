@@ -38,6 +38,10 @@ docker compose up -d --build
 
 The API and admin SPA listen on `http://localhost:6942`.
 
+For local admin UI work, run `./script/build-container-watch` with Docker
+Compose 2.32.2 or later. It rebuilds the frontend inside the running backend
+container when UI files change. Refresh the admin page to see the changes.
+
 If port 5432 is already in use, set `POSTGRES_PORT=5433` in `.env` and
 update the port in `DATABASE_URL` to `5433` for local migrations and seeding.
 The backend container continues to connect to Postgres internally on port 5432.

@@ -188,9 +188,11 @@ summary:focus-visible {
   outline-offset: 3px;
 }
 
-input:focus,
-textarea:focus {
+input:not([type="checkbox"], [type="radio"]):focus,
+textarea:focus,
+[contenteditable="true"]:focus {
   outline: none;
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 button:disabled {
@@ -1010,6 +1012,15 @@ details.content-panel > summary {
   border: 2px solid var(--line);
 }
 
+.section-editor-heading button[popovertarget] {
+  transform: none;
+  box-shadow: none;
+}
+
+.section-type-arrow {
+  margin-left: 0.4em;
+}
+
 .section-type-options button {
   display: block;
   width: 100%;
@@ -1088,9 +1099,6 @@ details.content-panel > summary {
   overflow-wrap: anywhere;
 }
 
-.rich-input:focus-visible,
-.content-editor-shell textarea:focus-visible,
-.content-editor-shell input:focus-visible,
 .content-editor-shell select:focus-visible {
   outline: 2px solid var(--line);
   outline-offset: 3px;

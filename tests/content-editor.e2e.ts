@@ -193,6 +193,7 @@ for (const width of [1280, 390]) {
       exact: true,
     });
     await addSection.click();
+    await expect(addSection).toHaveCSS("box-shadow", "none");
     const options = page.locator("#add-section-types");
     const triggerBounds = await addSection.boundingBox();
     const optionsBounds = await options.boundingBox();
@@ -205,9 +206,13 @@ for (const width of [1280, 390]) {
     await expect(options).toBeHidden();
     await addSection.press("Enter");
     await page.getByRole("button", { name: "Charity", exact: true }).click();
-    await page
-      .getByLabel("Section 4 title", { exact: true })
-      .fill("Local Charity");
+    const charityTitle = page.getByLabel("Section 4 title", { exact: true });
+    await charityTitle.fill("Local Charity");
+    await expect(charityTitle).toHaveCSS("outline-style", "none");
+    await expect(charityTitle).toHaveCSS(
+      "box-shadow",
+      "rgb(17, 17, 17) 0px 0px 0px 1px inset",
+    );
     await page
       .getByLabel("Section 4 charity key", { exact: true })
       .fill("local-charity");
