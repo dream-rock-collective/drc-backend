@@ -45,7 +45,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: dream-rock-collective/registration-site
-          ref: 3a8b5251a0e4968c1c509cffb6b1211c070b7682
+          ref: fd7b9957a33c138646ca4d0386fda64b5209d7ae
           persist-credentials: false
           path: registration-site
       - uses: oven-sh/setup-bun@v2
