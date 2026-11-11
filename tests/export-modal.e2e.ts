@@ -57,7 +57,7 @@ test("defaults, cancellation, and keyboard focus", async ({ page }) => {
   ).toHaveAttribute("aria-current", "page");
   await expect(
     navigation.getByRole("link", { name: "Editor", exact: true }),
-  ).toHaveCSS("color", "rgb(5, 5, 5)");
+  ).toHaveCSS("color", "rgb(136, 136, 136)");
   await expect(
     navigation.getByRole("link", { name: "Registrations" }),
   ).toHaveCSS("border-bottom-width", "4px");

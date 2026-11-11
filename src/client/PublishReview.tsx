@@ -55,10 +55,12 @@ export function PublishReview({
   onConfirm: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
   const changes = contentChanges(before, after);
   useEffect(() => {
     const element = dialog.current;
     element?.showModal();
+    cancelButton.current?.focus();
     return () => element?.close();
   }, []);
 
@@ -120,7 +122,7 @@ export function PublishReview({
         <button
           type="button"
           className="secondary"
-          autoFocus
+          ref={cancelButton}
           onClick={onCancel}
         >
           Keep editing
