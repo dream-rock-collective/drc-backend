@@ -163,6 +163,11 @@ The registration is marked paid only after Stripe sends a signed
 Checkout sessions return to `/allocate-payment/`; canceled sessions return to
 `/registered/`.
 
+With `STRIPE_MODE=MOCKED`, checkout validates the request and returns a URL
+directly to the registration site's `/allocate-payment/` page. The webhook
+returns `{ "received": true }`. Both responses bypass Stripe and leave
+registration records untouched.
+
 ## Donation allocations
 
 `POST /submit-allocation` accepts:

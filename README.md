@@ -19,6 +19,7 @@ ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-this-admin-password
 BETTER_AUTH_SECRET=replace-with-a-long-random-secret
 BETTER_AUTH_URL=http://localhost:6942
+STRIPE_MODE=CONNECTED
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_ONCE=price_...
@@ -97,7 +98,14 @@ Values must be nonnegative integers. Percentage allocations must total exactly
 See the [allocation contract](docs/registration-site-api.md#donation-allocations)
 for history and admin editing.
 
-Use Stripe test-mode keys and prices for local development. For local webhook
+Set `STRIPE_MODE=MOCKED` in `.env` to try the checkout redirect without Stripe
+credentials. Edit the dummy responses in [src/stripe-mock.ts](src/stripe-mock.ts).
+Mock checkout leaves payment status unchanged, so allocation submission still
+requires a paid registration. Restart the backend after changing the mode
+(recreate the backend container when using Compose).
+
+In the default `CONNECTED` mode, use Stripe test-mode keys and prices for local
+development. For local webhook
 delivery, run `stripe listen --forward-to localhost:6942/webhooks/stripe` and
 use the signing secret it prints as `STRIPE_WEBHOOK_SECRET`.
 

@@ -10,13 +10,16 @@ Footer controls. Member Pane editing is temporarily disabled; its saved content
 and public-page behavior stay unchanged. Subscriptions exposes a title, rich-text introduction, and an
 ordered list of title/body/optional-image sections, plus plain-text labels for
 One Time, Monthly, and Yearly. These labels do not change checkout plan IDs or prices. Donations exposes a title,
-rich-text introduction, and ordered charity sections containing editable `key`,
-`title`, `url`, rich-text `body`, and optional `image: { src, alt }`. Success
+rich-text introduction, and an ordered list of sections. Open Add section and
+choose Default or Charity. Both types have a title, rich-text body, and
+optional image. Charity sections also have a required key and an optional
+HTTP(S) URL. Success
 exposes only its heading. Sections can be added, removed, and moved up/down;
 Donations requires at least one charity and unique keys containing only letters,
 digits, underscores, or hyphens (maximum 100 characters).
 
-The charity array drives both allocation columns and descriptions. Keys become
+All donation sections appear in page order. Only charity sections produce
+allocation columns. Keys become
 properties in the existing dollar allocation payload; renaming a key affects
 future submissions, not historical records. Saved browser allocations containing
 removed/renamed keys must be allocated again. Budgets, payment settings, prices,

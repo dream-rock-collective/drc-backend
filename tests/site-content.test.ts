@@ -321,6 +321,13 @@ describe("site content HTTP boundary", () => {
         ).status,
       ).toBe(400);
       section["image"] = { src: "/leeya-appleby.jpeg", alt: "Existing" };
+      if (page === "donations") {
+        delete section["url"];
+        fields.sections.push({
+          title: "About donations",
+          body: "<p>More information</p>",
+        });
+      }
     }
     const response = await app().request(
       `${origin}/api/site-content/publish`,

@@ -353,6 +353,26 @@ export function ContentEditor({
     else setContent({ ...content, [page]: next as SectionPage });
   };
 
+  const cannotAddSection =
+    page === "success" ||
+    busy ||
+    invalidDraft ||
+    snapshot?.pending ||
+    selectedContent.sections.length >= 100;
+
+  const addSection = (charity: boolean) =>
+    setPageContent({
+      ...selectedContent,
+      sections: [
+        ...selectedContent.sections,
+        {
+          title: "New section",
+          body: "<p></p>",
+          ...(charity ? { key: "" } : {}),
+        },
+      ],
+    });
+
   return (
     <main className="page-shell content-editor-shell">
       <BackupStatus value={lastBackup} />
@@ -421,7 +441,12 @@ export function ContentEditor({
         </p>
       ) : (
         <>
-          <section className="content-publish" aria-label="Publishing">
+          <section
+            className={
+              changed ? "content-publish has-changes" : "content-publish"
+            }
+            aria-label="Publishing"
+          >
             <div>
               <strong>
                 {snapshot.mode === "local"
@@ -574,30 +599,38 @@ export function ContentEditor({
                     <h2 id="sections-heading">Page sections</h2>
                     <button
                       type="button"
-                      disabled={
-                        busy ||
-                        invalidDraft ||
-                        snapshot.pending ||
-                        selectedContent.sections.length >= 100
+                      disabled={cannotAddSection}
+                      popoverTarget={
+                        page === "donations" ? "add-section-types" : undefined
                       }
-                      onClick={() =>
-                        setPageContent({
-                          ...selectedContent,
-                          sections: [
-                            ...selectedContent.sections,
-                            {
-                              title: "New section",
-                              body: "<p></p>",
-                              ...(page === "donations"
-                                ? { key: "", url: "" }
-                                : {}),
-                            },
-                          ],
-                        })
+                      onClick={
+                        page === "donations"
+                          ? undefined
+                          : () => addSection(false)
                       }
                     >
                       Add section
                     </button>
+                    {page === "donations" && (
+                      <div
+                        id="add-section-types"
+                        className="section-type-options"
+                        popover="auto"
+                      >
+                        {(["Default", "Charity"] as const).map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            disabled={cannotAddSection}
+                            popoverTarget="add-section-types"
+                            popoverTargetAction="hide"
+                            onClick={() => addSection(type === "Charity")}
+                          >
+                            {type}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {selectedContent.sections.map((section, index) => (
                     <fieldset
@@ -654,7 +687,11 @@ export function ContentEditor({
                             className="secondary section-remove"
                             disabled={
                               page === "donations" &&
-                              selectedContent.sections.length <= 1
+                              section.key !== undefined &&
+                              !selectedContent.sections.some(
+                                (item, position) =>
+                                  position !== index && item.key !== undefined,
+                              )
                             }
                             aria-label={`Remove section ${index + 1}`}
                             onClick={() => {
@@ -692,10 +729,11 @@ export function ContentEditor({
                         />
                       </label>
                       {page === "donations" &&
+                        section.key !== undefined &&
                         (["key", "url"] as const).map((field) => (
                           <label key={field}>
                             Section {index + 1}{" "}
-                            {field === "key" ? "charity key" : "URL"}
+                            {field === "key" ? "charity key" : "URL (optional)"}
                             <input
                               value={section[field] ?? ""}
                               onChange={(event) =>

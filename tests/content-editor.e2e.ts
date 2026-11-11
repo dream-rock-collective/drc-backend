@@ -188,18 +188,32 @@ for (const width of [1280, 390]) {
     }
     await page.screenshot({ path: testInfo.outputPath("sticky-controls.png") });
     await expect(preview.locator(".allocation-column")).toHaveCount(3);
-    await page
-      .getByRole("button", { name: "Add section", exact: true })
-      .click();
+    const addSection = page.getByRole("button", {
+      name: "Add section",
+      exact: true,
+    });
+    await addSection.click();
+    const options = page.locator("#add-section-types");
+    const triggerBounds = await addSection.boundingBox();
+    const optionsBounds = await options.boundingBox();
+    if (!triggerBounds || !optionsBounds)
+      throw new Error("Section dropdown is hidden");
+    expect(
+      Math.abs(optionsBounds.y - (triggerBounds.y + triggerBounds.height)),
+    ).toBeLessThanOrEqual(4);
+    await page.keyboard.press("Escape");
+    await expect(options).toBeHidden();
+    await addSection.press("Enter");
+    await page.getByRole("button", { name: "Charity", exact: true }).click();
     await page
       .getByLabel("Section 4 title", { exact: true })
       .fill("Local Charity");
     await page
       .getByLabel("Section 4 charity key", { exact: true })
       .fill("local-charity");
-    await page
-      .getByLabel("Section 4 URL", { exact: true })
-      .fill("https://example.com/local");
+    await expect(
+      page.getByLabel("Section 4 URL (optional)", { exact: true }),
+    ).toHaveValue("");
     await page
       .getByRole("combobox", { name: /Section 4 image/ })
       .selectOption("/leeya-appleby.jpeg");
@@ -219,6 +233,16 @@ for (const width of [1280, 390]) {
     await expect(
       preview.locator('.allocation-column[data-organization="local-charity"]'),
     ).toHaveCount(1);
+    await addSection.click();
+    await page.getByRole("button", { name: "Default", exact: true }).click();
+    await page
+      .getByLabel("Section 4 title", { exact: true })
+      .fill("About donations");
+    await expect(page.getByLabel("Section 4 charity key")).toHaveCount(0);
+    await expect(
+      preview.getByRole("heading", { name: "About donations", exact: true }),
+    ).toBeVisible();
+    await expect(preview.locator(".allocation-column")).toHaveCount(3);
     await expect(
       preview.getByRole("button", { name: "Submit", exact: true }),
     ).toBeDisabled();
@@ -303,6 +327,9 @@ for (const width of [1280, 390]) {
     await expect(
       page.getByLabel("Section 2 charity key", { exact: true }),
     ).toHaveValue("local-charity");
+    await expect(
+      page.getByLabel("Section 4 title", { exact: true }),
+    ).toHaveValue("About donations");
     await page.getByRole("button", { name: "Publish", exact: true }).click();
     await expect(page.getByRole("dialog")).toContainText("local-charity");
     await expect(page.getByRole("dialog")).toContainText("Thank you, friend!");
@@ -317,6 +344,7 @@ for (const width of [1280, 390]) {
       "weAllWeGotSd",
       "local-charity",
       "otayMesaDetentionResistance",
+      undefined,
     ]);
     expect(content.subscriptions.sections).toHaveLength(2);
     expect(content.subscriptions.planLabels).toEqual({
