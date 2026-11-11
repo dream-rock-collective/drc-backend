@@ -1,15 +1,39 @@
 # Website editor handoff
 
-The editor changes the initial registration page only. Text is stored in the
-registration-site checkout at `content/initial-page.json`. Images are selected
-from that checkout's existing `public/` assets. Uploads and other pages are not
-part of this release.
+The editor covers Main, Subscriptions, Donations, and Success using the page
+selector. All content stays in the registration-site checkout at
+`content/initial-page.json`; switching pages preserves the same browser draft.
+Images come from that checkout's existing `public/` assets; uploads are excluded.
 
-Editable groups are Join Pane, Member Pane, Messages, Page Sections, and Footer.
-The footer text includes its emoji; edit or remove it directly in that field.
-Website metadata, logo labels/alt text, and membership plan labels stay fixed in
-the registration-site code. Existing browser drafts retain their editable text
-while obsolete groups are removed; stale revisions still require review.
+Main keeps its existing Join Pane, Member Pane, Messages, Page Sections, and
+Footer controls. Member Pane editing is temporarily disabled; its saved content
+and public-page behavior stay unchanged. Subscriptions exposes a title, rich-text introduction, and an
+ordered list of title/body/optional-image sections, plus plain-text labels for
+One Time, Monthly, and Yearly. These labels do not change checkout plan IDs or
+prices. Donations exposes a title and rich-text introduction. Success exposes
+its heading. On every page, Add section offers Default and Divider. Default
+sections have a title, rich-text body, and optional image. Dividers render as
+2px horizontal lines. Donations also offers Charity, which adds a required key
+and optional HTTP(S) URL. Sections can be added, removed, and moved up/down;
+Donations requires at least one charity and unique keys containing only letters,
+digits, underscores, or hyphens (maximum 100 characters).
+
+All donation sections appear in page order. Only charity sections produce
+allocation columns. Keys become
+properties in the existing dollar allocation payload; renaming a key affects
+future submissions, not historical records. Saved browser allocations containing
+removed/renamed keys must be allocated again. Budgets, payment settings, prices,
+other plan labels, operational messages, decorations, and metadata remain code-owned.
+The percentage API migration is deliberately excluded.
+
+The existing root fields stay unchanged. New sibling objects are
+`subscriptions: { title, body, planLabels: { once, monthly, yearly }, sections }`,
+`donations: { title, body, sections }`, and `success: { title, sections? }`.
+Dividers are stored as `{ type: "divider" }` and rendered by the public site.
+Old documents receive defaults for missing page objects. Deploy the matching
+registration-site validator/renderers in the publisher checkout before the new
+admin code. The deployed legacy allocation API must accept arbitrary charity
+keys before publishing added/renamed charities.
 
 ## Local setup
 
@@ -85,16 +109,19 @@ docker compose exec backend sh -c 'cd /site && bun install --frozen-lockfile'
 ```
 
 The editor updates the preview as you type without rebuilding for each edit.
+The editor panes fill the available window width, expanding as you zoom out.
 Use Desktop/Mobile to inspect widths, and reload the editor after site code or
-assets change. Retry preview is available when loading fails. Preview errors preserve the last valid rendered page. Registration,
+assets change. The preview follows the selected page without payment or storage
+side effects. Retry preview is available when loading fails. Preview errors preserve the last valid rendered page. Registration,
 payment, and navigation actions are disabled in the iframe.
 No additional preview environment variables are required. `BETTER_AUTH_URL`
 must match the admin browser origin for sign-in, publishing, and preview.
 
 ## Manual acceptance checklist
 
-1. Open Registrations, choose Website editor, and confirm the displayed mode.
-2. Edit a join label and section body. Try bold, italic, links, and lists. Reload
+1. Open Registrations, choose Editor, and confirm the displayed mode.
+2. Edit a join label and section body. Try bold (Ctrl+B or Cmd+B), italic
+   (Ctrl+I or Cmd+I), links, and lists. Reload
    and confirm the browser restores the unpublished draft.
 3. Add a section, move it, choose an existing image, and edit its alt text.
    Remove a section and check its confirmation. Check the live preview at both
@@ -117,17 +144,12 @@ They are not shared between devices. Clearing browser storage removes unpublishe
 ## Automated checks
 
 Backend: `bun test`, `bun run lint`, and `bun run build`.
-Registration site: `bun test`, `bun run lint`, and `bun run build`.
+Registration site: `bun test`, `bun run lint`, `bun run build`, and `bun run test:e2e`.
+The admin Playwright editor tests build the sibling site’s isolated preview;
+install locked dependencies in both repositories before running them.
 The backend tests use temporary local repositories and bare remotes, without
 contacting GitHub. See `plans/content-editor.md` in each repository for recorded
 verification and remaining acceptance work.
-
-Verified for this change: 41 backend tests and 13 site tests; lint, type checks,
-normal/preview builds; Docker image build and Git/SSH availability; real local
-sign-in, draft editing, local publication, and embedded live preview. Compact
-desktop/mobile browser checks passed. Production SSH access, branch permissions,
-and GitHub Pages deployment must be checked with your configured deployment;
-they were not exercised against the live repository.
 
 `compose.editor-test.yml` provides an isolated temporary database for real auth
 checks; the backend README documents its migration and seeding commands. Do not

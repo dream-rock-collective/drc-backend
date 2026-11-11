@@ -51,6 +51,23 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("defaults, cancellation, and keyboard focus", async ({ page }) => {
+  const navigation = page.getByRole("navigation", { name: "Admin views" });
+  await expect(
+    navigation.getByRole("link", { name: "Registrations" }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    navigation.getByRole("link", { name: "Editor", exact: true }),
+  ).toHaveCSS("color", "rgb(136, 136, 136)");
+  await expect(
+    navigation.getByRole("link", { name: "Registrations" }),
+  ).toHaveCSS("border-bottom-width", "4px");
+  const cards = page.locator(".analytics-card");
+  for (const price of await cards.locator(".analytics-price").all()) {
+    await expect(price).toHaveCSS("color", "rgb(85, 85, 85)");
+  }
+  const firstCard = await cards.nth(0).boundingBox();
+  const secondCard = await cards.nth(1).boundingBox();
+  expect(secondCard!.x - firstCard!.x - firstCard!.width).toBeLessThan(20);
   const trigger = page.getByRole("button", { name: "Export CSV", exact: true });
   await expect(page.getByRole("button", { name: "Export JSON" })).toHaveCount(
     0,

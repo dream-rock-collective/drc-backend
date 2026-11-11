@@ -1,12 +1,25 @@
 export type CopyFields = { [key: string]: string | CopyFields };
-export type ContentSection = {
+export type ContentSection =
+  | { type: "divider"; key?: never }
+  | {
+      type?: never;
+      title: string;
+      body: string;
+      key?: string;
+      url?: string;
+      image?: { src: string; alt: string };
+    };
+export type SectionPage = {
   title: string;
   body: string;
-  image?: { src: string; alt: string };
+  sections: ContentSection[];
+  planLabels?: Record<"once" | "monthly" | "yearly", string>;
 };
+type SuccessPage = { title: string; sections?: ContentSection[] };
+export type EditablePage = "main" | "subscriptions" | "donations" | "success";
 export type EditorContent = {
   sections: ContentSection[];
-  [key: string]: CopyFields | ContentSection[];
+  [key: string]: CopyFields | ContentSection[] | SectionPage | SuccessPage;
 };
 export type ContentSnapshot = {
   content: EditorContent;
@@ -26,29 +39,61 @@ const textFields = (value: unknown, depth = 0): boolean =>
   Object.values(value).every(
     (item) => typeof item === "string" || textFields(item, depth + 1),
   );
+function validSections(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length <= 100 &&
+    value.every(
+      (section) =>
+        record(section) &&
+        (section["type"] === "divider"
+          ? Object.keys(section).length === 1
+          : section["type"] === undefined &&
+            typeof section["title"] === "string" &&
+            typeof section["body"] === "string" &&
+            (section["key"] === undefined ||
+              typeof section["key"] === "string") &&
+            (section["url"] === undefined ||
+              typeof section["url"] === "string") &&
+            (section["image"] === undefined ||
+              (record(section["image"]) &&
+                typeof section["image"]["src"] === "string" &&
+                typeof section["image"]["alt"] === "string"))),
+    )
+  );
+}
 export function parseEditorContent(value: unknown): EditorContent {
   if (
     !record(value) ||
-    !Array.isArray(value["sections"]) ||
-    value["sections"].length > 100 ||
-    Object.entries(value).some(
-      ([key, item]) => key !== "sections" && !textFields(item),
-    ) ||
-    value["sections"].some(
-      (section: unknown) =>
-        !record(section) ||
-        typeof section["title"] !== "string" ||
-        typeof section["body"] !== "string" ||
-        (section["image"] !== undefined &&
-          (!record(section["image"]) ||
-            typeof section["image"]["src"] !== "string" ||
-            typeof section["image"]["alt"] !== "string")),
-    )
-  ) {
+    !validSections(value["sections"]) ||
+    Object.entries(value).some(([key, item]) => {
+      if (key === "sections") return false;
+      const planLabels = record(item) ? item["planLabels"] : undefined;
+      if (key === "success")
+        return (
+          !record(item) ||
+          typeof item["title"] !== "string" ||
+          (item["sections"] !== undefined && !validSections(item["sections"]))
+        );
+      if (key === "subscriptions" || key === "donations")
+        return (
+          !record(item) ||
+          typeof item["title"] !== "string" ||
+          typeof item["body"] !== "string" ||
+          !validSections(item["sections"]) ||
+          (key === "subscriptions" &&
+            planLabels !== undefined &&
+            (!record(planLabels) ||
+              ["once", "monthly", "yearly"].some(
+                (plan) => typeof planLabels[plan] !== "string",
+              )))
+        );
+      return !textFields(item);
+    })
+  )
     throw new Error(
       "The saved page content is invalid. Discard this draft and reload the current page.",
     );
-  }
   return value as EditorContent;
 }
 export function parseSnapshot(value: unknown): ContentSnapshot {
@@ -82,7 +127,7 @@ export function parseDraft(raw: string): ContentDraft {
   const content = parseEditorContent(value["content"]);
   for (const key of ["metadata", "branding", "planLabels"]) delete content[key];
   const member = content["member"];
-  if (record(member)) delete member["heading"];
+  if (record(member)) delete (member as Record<string, unknown>)["heading"];
   return { revision: value["revision"], content };
 }
 export function replaceCopyField(

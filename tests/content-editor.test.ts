@@ -90,7 +90,9 @@ describe("browser draft contract", () => {
   });
   test("moves array entries intact and does not mutate existing content", () => {
     expect(
-      moveSection(content.sections, 1, 0).map((section) => section.title),
+      moveSection(content.sections, 1, 0).map((section) =>
+        section.type === "divider" ? "Divider" : section.title,
+      ),
     ).toEqual(["Second", "First"]);
     expect(content.sections[0]?.title).toBe("First");
     expect(moveSection(content.sections, 0, -1)).toEqual(content.sections);
@@ -168,4 +170,86 @@ test("link controls reject executable and obfuscated destinations", () => {
     "#about",
   ])
     expect(safeLink(url)).toBe(true);
+});
+
+test("nested page drafts retain ordered charity fields and review changes", () => {
+  const pages = {
+    ...content,
+    subscriptions: {
+      title: "Subscriptions",
+      body: "<p>Intro</p>",
+      sections: content.sections,
+    },
+    donations: {
+      title: "Donate",
+      body: "<p>Choose</p>",
+      sections: [
+        {
+          key: "first",
+          title: "First Charity",
+          url: "https://example.test",
+          body: "<p>Work</p>",
+        },
+        {
+          key: "second",
+          title: "Second Charity",
+          url: "https://example.test/second",
+          body: "<p>More</p>",
+        },
+      ],
+    },
+    success: { title: "Thanks!", sections: [{ type: "divider" as const }] },
+  };
+  const restored = parseDraft(JSON.stringify({ revision, content: pages }));
+  expect(restored.content).toEqual(pages);
+  const updated = replaceCopyField(
+    restored.content,
+    ["donations", "title"],
+    "Give locally",
+  );
+  expect(updated["subscriptions"]).toEqual(pages.subscriptions);
+  const reordered = {
+    ...pages,
+    donations: {
+      ...pages.donations,
+      sections: moveSection(pages.donations.sections, 1, 0),
+    },
+  };
+  expect(contentChanges(pages, reordered)).toContainEqual({
+    path: ["donations", "sections", "0", "key"],
+    before: "first",
+    after: "second",
+  });
+  expect(() =>
+    parseEditorContent({
+      ...pages,
+      donations: { ...pages.donations, sections: [{ title: "Bad", body: 3 }] },
+    }),
+  ).toThrow();
+});
+
+test("drafts retain dividers and reject content attached to divider records", () => {
+  const divided = { ...content, sections: [{ type: "divider" as const }] };
+  expect(parseEditorContent(divided)).toEqual(divided);
+  const parsed = parseEditorContent(divided);
+  const reordered = moveSection(
+    [...content.sections, ...parsed.sections],
+    2,
+    0,
+  );
+  expect(reordered[0]).toEqual({ type: "divider" });
+  expect(contentChanges(content, parsed)).toContainEqual({
+    path: ["sections", "0", "type"],
+    before: undefined,
+    after: "divider",
+  });
+  for (const section of [
+    { type: "divider", title: "Unexpected" },
+    { type: "divider", image: { src: "/rock.png", alt: "Unexpected" } },
+    { type: "unknown" },
+  ]) {
+    expect(() =>
+      parseEditorContent({ ...content, sections: [section] }),
+    ).toThrow();
+  }
 });

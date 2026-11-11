@@ -12,12 +12,14 @@ Create a `.env` file:
 POSTGRES_DB=collective_admin
 POSTGRES_USER=admin
 POSTGRES_PASSWORD=change-this-password
+POSTGRES_PORT=5432
 DATABASE_URL=postgres://admin:change-this-password@localhost:5432/collective_admin
 REGISTRATION_SITE_ORIGIN=http://localhost:5173
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-this-admin-password
 BETTER_AUTH_SECRET=replace-with-a-long-random-secret
 BETTER_AUTH_URL=http://localhost:6942
+STRIPE_MODE=CONNECTED
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_ONCE=price_...
@@ -36,11 +38,21 @@ docker compose up -d --build
 
 The API and admin SPA listen on `http://localhost:6942`.
 
+For local admin UI work, run `./script/build-container-watch` with Docker
+Compose 2.32.2 or later. It rebuilds the frontend inside the running backend
+container when UI files change. Refresh the admin page to see the changes.
+
+If port 5432 is already in use, set `POSTGRES_PORT=5433` in `.env` and
+update the port in `DATABASE_URL` to `5433` for local migrations and seeding.
+The backend container continues to connect to Postgres internally on port 5432.
+
 Deployments use the same sequence through:
 
 ```sh
 ./scripts/deploy.sh
 ```
+
+After startup, the script lists each running service and its container ports and host port mappings.
 
 ## Run locally
 
@@ -79,18 +91,26 @@ curl -X POST http://localhost:6942/register \
 The public payment endpoints are:
 
 - `POST /create-checkout-session` with `{ "userId": 42, "plan": "once" | "monthly" | "yearly" }`; returns the hosted Stripe Checkout URL.
-- `POST /submit-allocation` with `{ "userId": "42", "allocation": { "charityKey": 100 }, "format": "percentage" }`; stores an allocation submission for a paid registration.
+- `POST /submit-allocation` with `{ "userId": "42", "allocation": { "charityKey": 100 }, "format": "percentage" }`; stores an allocation submission.
 - `POST /webhooks/stripe`; configure Stripe to send signed events here. The webhook records completed Checkout Sessions on the registration.
 
 Checkout success returns to the registration site's `/allocate-payment/` page.
 Allocation keys are frontend-owned. Include `format: "dollars" | "percentage"`
 explicitly in new clients; omitted format is legacy compatibility and means dollars.
 Values must be nonnegative integers. Percentage allocations must total exactly
-100; dollar totals remain unrestricted. The registration must have been paid.
+100; dollar totals remain unrestricted. In `CONNECTED` mode, the registration
+must have been paid.
 See the [allocation contract](docs/registration-site-api.md#donation-allocations)
 for history and admin editing.
 
-Use Stripe test-mode keys and prices for local development. For local webhook
+Set `STRIPE_MODE=MOCKED` in `.env` to try the checkout redirect without Stripe
+credentials. Edit the dummy responses in [src/stripe-mock.ts](src/stripe-mock.ts).
+Mock mode lets unpaid registrations submit allocations and leaves their payment
+status unchanged. Restart the backend after changing the mode
+(recreate the backend container when using Compose).
+
+In the default `CONNECTED` mode, use Stripe test-mode keys and prices for local
+development. For local webhook
 delivery, run `stripe listen --forward-to localhost:6942/webhooks/stripe` and
 use the signing secret it prints as `STRIPE_WEBHOOK_SECRET`.
 

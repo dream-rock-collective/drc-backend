@@ -12,6 +12,8 @@ import {
 } from "./export";
 import type { ExportSelection } from "./export";
 import { ContentEditor } from "./ContentEditor";
+import { ViewNavigation } from "./ViewNavigation";
+import { BackupStatus } from "./BackupStatus";
 
 const cacheKey = "dreamrock:registrations";
 const backupTimestampKey = "dreamrock:registrations:last-backup";
@@ -54,12 +56,6 @@ const planLabel = (plan: Registration["plan"]): string => {
   if (plan === "monthly") return "Monthly";
   if (plan === "yearly") return "Yearly";
   return "—";
-};
-
-const formatBackupTimestamp = (value: string | null): string => {
-  if (!value) return "Never";
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? "Never" : date.toLocaleString();
 };
 
 const planPrices = {
@@ -127,7 +123,12 @@ export const App = () => {
   }
 
   if (path === "/editor")
-    return <ContentEditor onUnauthenticated={redirectToLogin} />;
+    return (
+      <ContentEditor
+        onUnauthenticated={redirectToLogin}
+        lastBackup={readBackupTimestamp()}
+      />
+    );
 
   return <Dashboard onUnauthenticated={redirectToLogin} />;
 };
@@ -308,16 +309,11 @@ const Dashboard = ({
           }}
         />
       )}
-      <p className="backup-status">
-        Last local backup: {formatBackupTimestamp(lastBackup)}
-      </p>
+      <BackupStatus value={lastBackup} />
       <header className="page-header">
         <div>
           <p className="eyebrow">Dream Rock Collective</p>
-          <div className="page-title-row">
-            <img className="admin-mark" src="/rock.png" alt="" />
-            <h1>Registrations</h1>
-          </div>
+          <ViewNavigation active="registrations" />
         </div>
         <div className="toolbar">
           <button
@@ -327,15 +323,6 @@ const Dashboard = ({
             onClick={() => setExportOpen(true)}
           >
             Export CSV
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              window.location.href = "/editor";
-            }}
-          >
-            Website editor
           </button>
           <button
             type="button"

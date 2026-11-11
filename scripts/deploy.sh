@@ -20,3 +20,4 @@ echo "Starting the backend…"
 docker compose up -d backend
 
 echo "Dream Rock stack rebuilt and running."
+docker compose ps --format 'table {{.Service}}\t{{.Ports}}'

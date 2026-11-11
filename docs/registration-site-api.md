@@ -163,6 +163,11 @@ The registration is marked paid only after Stripe sends a signed
 Checkout sessions return to `/allocate-payment/`; canceled sessions return to
 `/registered/`.
 
+With `STRIPE_MODE=MOCKED`, checkout validates the request and returns a URL
+directly to the registration site's `/allocate-payment/` page. The webhook
+returns `{ "received": true }`. Both responses bypass Stripe and leave
+registration records untouched.
+
 ## Donation allocations
 
 `POST /submit-allocation` accepts:
@@ -183,8 +188,10 @@ values must be nonnegative integers. Percentage values must total exactly 100;
 any whole-percent split is supported. Dollar totals remain unrestricted.
 
 Returns `201` with `{"allocationId":123}`. Invalid bodies return `400`, missing
-registrations return `404`, unpaid registrations return `403`, and persistence
-failures return `500`. Checkout prices and the donation share are unaffected.
+registrations return `404`, and persistence failures return `500`. In
+`CONNECTED` mode, unpaid registrations return `403`. In `MOCKED` mode,
+allocations can be saved for unpaid registrations and their payment status stays
+the same. Checkout prices and the donation share are unaffected.
 
 Authenticated `GET /registrations/:id/allocations` returns newest-first history:
 

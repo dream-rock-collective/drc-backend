@@ -88,7 +88,18 @@ function validateImages(content: unknown, available: string[]): void {
     !Array.isArray(content.sections)
   )
     throw new SitePublishError("Invalid content sections", 400);
-  for (const section of content.sections) {
+  const sections: unknown[] = [...content.sections];
+  for (const page of ["subscriptions", "donations", "success"]) {
+    const nested: unknown = (content as Record<string, unknown>)[page];
+    if (
+      nested &&
+      typeof nested === "object" &&
+      "sections" in nested &&
+      Array.isArray(nested.sections)
+    )
+      sections.push(...nested.sections);
+  }
+  for (const section of sections) {
     if (section && typeof section === "object" && "image" in section) {
       const image: unknown = section.image;
       if (

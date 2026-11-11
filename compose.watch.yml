@@ -1,0 +1,14 @@
+services:
+  backend:
+    develop:
+      watch:
+        - action: sync+exec
+          path: .
+          target: /app
+          include:
+            - src/client/**
+            - public/**
+            - index.html
+            - vite.config.ts
+          exec:
+            command: bun run build

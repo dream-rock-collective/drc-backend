@@ -45,6 +45,13 @@ beforeEach(async () => {
     path.resolve(import.meta.dir, "../../registration-site/src/content.ts"),
     path.join(directory, "site/src/content.ts"),
   );
+  await cp(
+    path.resolve(
+      import.meta.dir,
+      "../../registration-site/src/page-defaults.json",
+    ),
+    path.join(directory, "site/src/page-defaults.json"),
+  );
   content = JSON.parse(
     await readFile(
       path.resolve(
@@ -295,6 +302,89 @@ describe("site content HTTP boundary", () => {
         ).status,
       ).toBe(400);
     }
+  });
+
+  test("validates nested page assets and charity keys before writing", async () => {
+    const body = await requestBody();
+    for (const page of ["subscriptions", "donations"]) {
+      const fields = body.content[page] as {
+        sections: Array<Record<string, unknown>>;
+      };
+      const section = fields.sections[0]!;
+      section["image"] = { src: "/missing.png", alt: "Missing" };
+      expect(
+        (
+          await app().request(
+            `${origin}/api/site-content/publish`,
+            publishRequest(body),
+          )
+        ).status,
+      ).toBe(400);
+      section["image"] = { src: "/leeya-appleby.jpeg", alt: "Existing" };
+      if (page === "donations") {
+        delete section["url"];
+        fields.sections.push({
+          title: "About donations",
+          body: "<p>More information</p>",
+        });
+      }
+    }
+    const response = await app().request(
+      `${origin}/api/site-content/publish`,
+      publishRequest(body),
+    );
+    expect(response.status).toBe(200);
+    const published = await response.json();
+    expect(published.content).toEqual(body.content);
+    const next = await requestBody();
+    const charities = next.content["donations"] as {
+      sections: Array<{ key: string }>;
+    };
+    charities.sections[1]!.key = charities.sections[0]!.key;
+    expect(
+      (
+        await app().request(
+          `${origin}/api/site-content/publish`,
+          publishRequest(next),
+        )
+      ).status,
+    ).toBe(400);
+  });
+
+  test("publishes dividers on every page and validates Success images", async () => {
+    const body = await requestBody();
+    for (const page of ["main", "subscriptions", "donations", "success"]) {
+      const fields = (page === "main" ? body.content : body.content[page]) as {
+        sections?: Array<Record<string, unknown>>;
+      };
+      fields.sections = [...(fields.sections ?? []), { type: "divider" }];
+    }
+    const success = body.content["success"] as {
+      sections: Array<Record<string, unknown>>;
+    };
+    success.sections.push({
+      title: "Next steps",
+      body: "<p>More information</p>",
+      image: { src: "/missing.png", alt: "Missing" },
+    });
+    expect(
+      (
+        await app().request(
+          `${origin}/api/site-content/publish`,
+          publishRequest(body),
+        )
+      ).status,
+    ).toBe(400);
+    success.sections[1]!["image"] = {
+      src: "/leeya-appleby.jpeg",
+      alt: "Existing",
+    };
+    const response = await app().request(
+      `${origin}/api/site-content/publish`,
+      publishRequest(body),
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).content).toEqual(body.content);
   });
 
   test("blocks stale content rather than overwriting newer edits", async () => {

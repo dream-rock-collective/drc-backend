@@ -3,10 +3,13 @@ import { contentChanges, type EditorContent } from "./content-editor-state";
 import { normalizeRichText } from "./RichTextEditor";
 
 function changeLabel(path: string[]): string {
-  const parts =
-    path[0] === "sections"
-      ? [`Section ${Number(path[1]) + 1}`, ...path.slice(2)]
-      : path;
+  const parts = path.flatMap((part, index) =>
+    part === "sections" && path[index + 1] !== undefined
+      ? [`Section ${Number(path[index + 1]) + 1}`]
+      : index > 0 && path[index - 1] === "sections"
+        ? []
+        : [part],
+  );
   return parts
     .map((part) =>
       part === "join"
@@ -52,10 +55,12 @@ export function PublishReview({
   onConfirm: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
   const changes = contentChanges(before, after);
   useEffect(() => {
     const element = dialog.current;
     element?.showModal();
+    cancelButton.current?.focus();
     return () => element?.close();
   }, []);
 
@@ -111,16 +116,16 @@ export function PublishReview({
         )}
       </div>
       <footer className="content-actions">
+        <button type="button" onClick={onConfirm}>
+          {pending ? "Confirm retry" : "Confirm publish"}
+        </button>
         <button
           type="button"
           className="secondary"
-          autoFocus
+          ref={cancelButton}
           onClick={onCancel}
         >
           Keep editing
-        </button>
-        <button type="button" onClick={onConfirm}>
-          {pending ? "Confirm retry" : "Confirm publish"}
         </button>
       </footer>
     </dialog>

@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { z } from "zod";
 import { database } from "../db";
 import { logger } from "../logger";
+import { isStripeMocked, stripeMock } from "../stripe-mock";
 
 export const paymentsRoute = new Hono();
 
@@ -27,10 +28,14 @@ const configuredStripeMode = (): StripeMode =>
 
 const stripeModeMismatch = (livemode: boolean): boolean => {
   const configuredMode = configuredStripeMode();
-  return configuredMode !== "unknown" && (configuredMode === "live") !== livemode;
+  return (
+    configuredMode !== "unknown" && (configuredMode === "live") !== livemode
+  );
 };
 
-const configuredPriceSummary = (plan: Plan): { configured: boolean; prefix: string | null } => {
+const configuredPriceSummary = (
+  plan: Plan,
+): { configured: boolean; prefix: string | null } => {
   const envName = {
     once: "STRIPE_PRICE_ONCE",
     monthly: "STRIPE_PRICE_MONTHLY",
@@ -43,7 +48,9 @@ const configuredPriceSummary = (plan: Plan): { configured: boolean; prefix: stri
 export const stripeConfigurationSummary = () => ({
   secretKeyConfigured: Boolean(process.env["STRIPE_SECRET_KEY"]?.trim()),
   secretKeyMode: configuredStripeMode(),
-  webhookSecretConfigured: Boolean(process.env["STRIPE_WEBHOOK_SECRET"]?.trim()),
+  webhookSecretConfigured: Boolean(
+    process.env["STRIPE_WEBHOOK_SECRET"]?.trim(),
+  ),
   webhookSecretLength: process.env["STRIPE_WEBHOOK_SECRET"]?.trim().length ?? 0,
   prices: {
     once: configuredPriceSummary("once"),
@@ -56,7 +63,9 @@ const getStripe = (): Stripe => {
   const secretKey = process.env["STRIPE_SECRET_KEY"]?.trim();
 
   if (!secretKey) {
-    logger.error("[payments] Stripe client initialization failed: secret key is missing");
+    logger.error(
+      "[payments] Stripe client initialization failed: secret key is missing",
+    );
     throw new Error("STRIPE_SECRET_KEY is not configured");
   }
 
@@ -88,8 +97,9 @@ const getPriceId = (plan: Plan): string => {
 };
 
 const getRegistrationSiteOrigin = (): string => {
-  return (process.env["REGISTRATION_SITE_ORIGIN"]?.trim() || "http://localhost:5173")
-    .replace(/\/$/, "");
+  return (
+    process.env["REGISTRATION_SITE_ORIGIN"]?.trim() || "http://localhost:5173"
+  ).replace(/\/$/, "");
 };
 
 paymentsRoute.post("/create-checkout-session", async (c) => {
@@ -106,10 +116,23 @@ paymentsRoute.post("/create-checkout-session", async (c) => {
   const result = checkoutSchema.safeParse(body);
   if (!result.success) {
     logger.warn("[payments] checkout request rejected: invalid payload");
-    return c.json({ error: "Registration id and a valid plan are required" }, 400);
+    return c.json(
+      { error: "Registration id and a valid plan are required" },
+      400,
+    );
   }
 
   const { userId, plan } = result.data;
+  if (isStripeMocked()) {
+    return c.json(
+      stripeMock["/create-checkout-session"]({
+        userId,
+        plan,
+        successUrl: `${getRegistrationSiteOrigin()}/allocate-payment/`,
+      }),
+    );
+  }
+
   const priceSummary = configuredPriceSummary(plan);
   logger.info("[payments] checkout request validated", {
     userId,
@@ -150,11 +173,14 @@ paymentsRoute.post("/create-checkout-session", async (c) => {
     });
 
     if (!session.url) {
-      logger.error("[payments] Stripe returned a Checkout Session without a URL", {
-        userId,
-        plan,
-        sessionId: session.id,
-      });
+      logger.error(
+        "[payments] Stripe returned a Checkout Session without a URL",
+        {
+          userId,
+          plan,
+          sessionId: session.id,
+        },
+      );
       return c.json({ error: "Could not create checkout session" }, 502);
     }
 
@@ -179,6 +205,10 @@ paymentsRoute.post("/create-checkout-session", async (c) => {
 });
 
 paymentsRoute.post("/webhooks/stripe", async (c) => {
+  if (isStripeMocked()) {
+    return c.json(stripeMock["/webhooks/stripe"](c.req));
+  }
+
   const webhookSecret = process.env["STRIPE_WEBHOOK_SECRET"]?.trim();
   const signature = c.req.header("stripe-signature");
   const requestDetails = {
@@ -211,7 +241,11 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
       bodyLength: rawBody.length,
       signaturePresent: Boolean(signature),
     });
-    event = await getStripe().webhooks.constructEventAsync(rawBody, signature, webhookSecret);
+    event = await getStripe().webhooks.constructEventAsync(
+      rawBody,
+      signature,
+      webhookSecret,
+    );
     logger.info("[payments] Stripe webhook signature verified", {
       eventId: event.id,
       eventType: event.type,
@@ -265,31 +299,43 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
     plan,
     mode: session.mode,
     paymentStatus: session.payment_status,
-    paymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
+    paymentIntentId:
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : null,
     customerId: typeof session.customer === "string" ? session.customer : null,
-    subscriptionId: typeof session.subscription === "string" ? session.subscription : null,
+    subscriptionId:
+      typeof session.subscription === "string" ? session.subscription : null,
   });
 
   const parsedPlan = planSchema.safeParse(plan);
 
   if (!Number.isSafeInteger(userId) || userId < 1 || !parsedPlan.success) {
-    logger.error("[payments] Stripe Checkout Session is missing valid registration metadata", {
-      eventId: event.id,
-      sessionId: session.id,
-      registrationReference: session.client_reference_id,
-      plan,
-    });
+    logger.error(
+      "[payments] Stripe Checkout Session is missing valid registration metadata",
+      {
+        eventId: event.id,
+        sessionId: session.id,
+        registrationReference: session.client_reference_id,
+        plan,
+      },
+    );
     return c.json({ received: true });
   }
 
-  const customerId = typeof session.customer === "string" ? session.customer : null;
-  const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
-  const paymentIntentId = session.mode === "payment" && typeof session.payment_intent === "string"
-    ? session.payment_intent
-    : null;
+  const customerId =
+    typeof session.customer === "string" ? session.customer : null;
+  const subscriptionId =
+    typeof session.subscription === "string" ? session.subscription : null;
+  const paymentIntentId =
+    session.mode === "payment" && typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : null;
 
   try {
-    const [before] = await database<{ payment_status: "pending" | "paid" | "failed"; plan: Plan | null }[]>`
+    const [before] = await database<
+      { payment_status: "pending" | "paid" | "failed"; plan: Plan | null }[]
+    >`
       SELECT payment_status, plan
       FROM registrations
       WHERE id = ${userId}
@@ -314,7 +360,13 @@ paymentsRoute.post("/webhooks/stripe", async (c) => {
       nextPlan: parsedPlan.data,
     });
 
-    const [updated] = await database<{ id: number; payment_status: "pending" | "paid" | "failed"; plan: Plan | null }[]>`
+    const [updated] = await database<
+      {
+        id: number;
+        payment_status: "pending" | "paid" | "failed";
+        plan: Plan | null;
+      }[]
+    >`
       UPDATE registrations
       SET
         payment_status = 'paid',
