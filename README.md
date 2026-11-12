@@ -54,6 +54,21 @@ Deployments use the same sequence through:
 
 After startup, the script lists each running service and its container ports and host port mappings.
 
+### Database export and import
+
+With the Compose `postgres` service running:
+
+```sh
+./scripts/pg-dump > /path/to/backup.dump
+./scripts/pg-import < /path/to/backup.dump
+```
+
+Both scripts use the database and credentials in the running container. The
+export is a PostgreSQL custom archive. Import replaces matching database objects
+and their data in one transaction; a failed restore rolls back. Stop application
+writes before importing. Only import trusted backups, and keep exports private
+and outside the repository because they contain application and authentication data.
+
 ## Run locally
 
 ```sh
