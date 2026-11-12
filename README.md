@@ -200,6 +200,60 @@ HTTPS repositories can use host-provisioned Git credentials, but must not embed
 credentials in the repository URL. Explicit local repository paths are supported
 for isolated integration tests.
 
+### Debian SSH setup
+
+Run these commands on the publishing server as the user running the backend.
+Install the tools and generate a dedicated key outside both repositories:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y openssh-client git
+mkdir -p "$HOME/.ssh/drc"
+chmod 700 "$HOME/.ssh" "$HOME/.ssh/drc"
+ssh-keygen -t ed25519 -C "registration-site publisher" \
+  -f "$HOME/.ssh/drc/deploy-key" -N ""
+cat "$HOME/.ssh/drc/deploy-key.pub"
+```
+
+The empty passphrase allows unattended publishing; keep the private key protected.
+In the registration-site GitHub repository, open **Settings → Deploy keys → Add
+deploy key**, paste the public key printed above, and enable **Allow write access**.
+Upload only the `.pub` file's contents, never the private key. See
+[GitHub's deploy key instructions](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys).
+
+Collect GitHub's host key and display its fingerprint:
+
+```sh
+ssh-keyscan -t ed25519 github.com > "$HOME/.ssh/drc/known_hosts"
+ssh-keygen -lf "$HOME/.ssh/drc/known_hosts"
+```
+
+Before using this file, compare the fingerprint with
+[GitHub's published SSH fingerprints](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints).
+Stop if it does not match: `ssh-keyscan` alone does not verify authenticity.
+
+Print the environment settings and copy the resulting literal absolute paths into
+`.env`; do not use `~` or `$HOME` in those values:
+
+```sh
+printf 'SITE_DEPLOY_KEY_PATH=%s\n' "$HOME/.ssh/drc/deploy-key"
+printf 'SITE_KNOWN_HOSTS_PATH=%s\n' "$HOME/.ssh/drc/known_hosts"
+```
+
+Test authentication after adding the deploy key and verifying the host fingerprint:
+
+```sh
+ssh -T -i "$HOME/.ssh/drc/deploy-key" \
+  -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+  -o UserKnownHostsFile="$HOME/.ssh/drc/known_hosts" git@github.com
+```
+
+GitHub should report successful authentication and no shell access; exit status
+`1` is normal for this test. For Docker, use the SSH Compose overlay above and
+ensure the container user can read the mounted files.
+
+### Publication consistency and recovery
+
 Edits carry the SHA-256 revision of the loaded file. A changed file blocks publishing
 until the editor reloads and reviews the newer version. Publishing operations are
 serialized within the process. Remote mode uses a checkout `.git/site-publisher.lock`
@@ -256,9 +310,10 @@ Run content-boundary tests with `bun test tests/site-content.test.ts`.
 
 ### Live preview
 
-Install the registration site's locked dependencies in `SITE_CHECKOUT_PATH`
-with `bun install --frozen-lockfile`. The backend runs that checkout's Vite
-preview build; it never installs dependencies automatically. The editor requests
+Before each uncached preview build, the backend runs `bun install --frozen-lockfile`
+in `SITE_CHECKOUT_PATH`, then runs that checkout's Vite preview build. The checkout
+must be writable and package registries reachable when dependencies need downloading.
+Changes to `package.json` or `bun.lock` automatically trigger installation and rebuilding. The editor requests
 `GET /api/site-preview` with its administrator session and receives an isolated
 iframe URL and a frame token. Reload the editor after changing
 site code or images. Source/configuration/assets are fingerprinted and unchanged

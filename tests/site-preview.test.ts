@@ -23,10 +23,6 @@ for (const name of [
   await cp(path.join(site, name), path.join(checkout, name), {
     recursive: true,
   });
-await symlink(
-  path.join(site, "node_modules"),
-  path.join(checkout, "node_modules"),
-);
 const config: SiteConfig = { mode: "local", checkoutPath: checkout };
 const origin = "http://admin.example.test";
 const user = {
@@ -65,7 +61,7 @@ describe("backend-hosted site preview", () => {
     expect(called).toBe(false);
   });
 
-  test("builds the real preview, reuses it, and serves only isolated generated assets", async () => {
+  test("installs missing dependencies, builds the real preview, reuses it, and serves only isolated generated assets", async () => {
     const response = await app(true).request(`${origin}/api/site-preview`);
     expect(response.status).toBe(200);
     const descriptor = await response.json();
@@ -113,7 +109,7 @@ describe("backend-hosted site preview", () => {
     ).toBeDefined();
   });
 
-  test("missing dependencies and source files return actionable build errors", async () => {
+  test("invalid locked dependencies and missing source files return actionable errors", async () => {
     const noDependencies = path.join(temporary, "without-dependencies");
     await mkdir(noDependencies);
     for (const name of [
@@ -127,6 +123,8 @@ describe("backend-hosted site preview", () => {
       await cp(path.join(checkout, name), path.join(noDependencies, name), {
         recursive: true,
       });
+    await buildSitePreview({ mode: "local", checkoutPath: noDependencies });
+    await writeFile(path.join(noDependencies, "bun.lock"), "invalid lockfile");
     await expect(
       buildSitePreview({ mode: "local", checkoutPath: noDependencies }),
     ).rejects.toThrow("install");
