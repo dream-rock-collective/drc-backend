@@ -111,14 +111,13 @@ export function ContentEditor({
           if (raw) {
             const draft = parseDraft(raw);
             const restored = { ...fresh.content, ...draft.content };
-            if (
-              fresh.content["subscriptions"] &&
-              draft.content["subscriptions"]
-            )
-              restored["subscriptions"] = {
-                ...(fresh.content["subscriptions"] as SectionPage),
-                ...(draft.content["subscriptions"] as SectionPage),
-              };
+            for (const page of ["subscriptions", "donations"]) {
+              if (fresh.content[page] && draft.content[page])
+                restored[page] = {
+                  ...(fresh.content[page] as SectionPage),
+                  ...(draft.content[page] as SectionPage),
+                };
+            }
             setContent(restored);
             setRevision(draft.revision);
             setNotice("Restored your unpublished browser draft.");
@@ -580,6 +579,19 @@ export function ContentEditor({
                       {
                         title: (content[page] as SectionPage).title,
                         body: (content[page] as SectionPage).body,
+                        ...(page === "donations"
+                          ? Object.fromEntries(
+                              Object.entries(
+                                content[page] as SectionPage,
+                              ).filter(
+                                ([key, value]) =>
+                                  [
+                                    "allocationSuccessTitle",
+                                    "allocationSuccessSubtext",
+                                  ].includes(key) && typeof value === "string",
+                              ),
+                            )
+                          : {}),
                         ...(page === "subscriptions" && planLabels
                           ? { planLabels }
                           : {}),

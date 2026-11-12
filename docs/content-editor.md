@@ -10,7 +10,7 @@ Footer controls. Member Pane editing is temporarily disabled; its saved content
 and public-page behavior stay unchanged. Subscriptions exposes a title, rich-text introduction, and an
 ordered list of title/body/optional-image sections, plus plain-text labels for
 One Time, Monthly, and Yearly. These labels do not change checkout plan IDs or
-prices. Donations exposes a title and rich-text introduction. Success exposes
+prices. Donations exposes a title, rich-text introduction, and plain-text allocation confirmation title and subtext. Success exposes
 its heading. On every page, Add section offers Default and Divider. Default
 sections have a title, rich-text body, and optional image. Dividers render as
 2px horizontal lines. Donations also offers Charity, which adds a required key
@@ -28,7 +28,7 @@ The percentage API migration is deliberately excluded.
 
 The existing root fields stay unchanged. New sibling objects are
 `subscriptions: { title, body, planLabels: { once, monthly, yearly }, sections }`,
-`donations: { title, body, sections }`, and `success: { title, sections? }`.
+`donations: { title, body, allocationSuccessTitle, allocationSuccessSubtext, sections }`, and `success: { title, sections? }`.
 Dividers are stored as `{ type: "divider" }` and rendered by the public site.
 Old documents receive defaults for missing page objects. Deploy the matching
 registration-site validator/renderers in the publisher checkout before the new

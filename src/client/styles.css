@@ -841,6 +841,7 @@ body:has(.content-editor-shell) {
 }
 
 .content-page-choice {
+  align-self: center;
   display: flex;
   align-items: center;
   gap: 0.6rem;

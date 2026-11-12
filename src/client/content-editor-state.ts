@@ -13,6 +13,8 @@ export type SectionPage = {
   title: string;
   body: string;
   sections: ContentSection[];
+  allocationSuccessTitle?: string;
+  allocationSuccessSubtext?: string;
   planLabels?: Record<"once" | "monthly" | "yearly", string>;
 };
 type SuccessPage = { title: string; sections?: ContentSection[] };
@@ -81,6 +83,11 @@ export function parseEditorContent(value: unknown): EditorContent {
           typeof item["title"] !== "string" ||
           typeof item["body"] !== "string" ||
           !validSections(item["sections"]) ||
+          (key === "donations" &&
+            ["allocationSuccessTitle", "allocationSuccessSubtext"].some(
+              (field) =>
+                item[field] !== undefined && typeof item[field] !== "string",
+            )) ||
           (key === "subscriptions" &&
             planLabels !== undefined &&
             (!record(planLabels) ||
