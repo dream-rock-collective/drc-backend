@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (( $# )) || [[ -t 0 ]]; then
+  echo 'Usage: ./scripts/pg-import < backup.dump' >&2
+  exit 1
+fi
+
+cd "$(dirname "$0")/.."
+exec docker compose exec -T postgres sh -c \
+  'exec pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --clean --if-exists --no-owner --no-acl --single-transaction'
