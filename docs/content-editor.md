@@ -98,15 +98,12 @@ by the overlay. Run one publishing service per checkout.
 
 ## Live preview
 
-Install the registration site's locked dependencies in the configured checkout
-before opening the editor. The backend builds its preview on first use and
-serves the result itself; a separate running Vite server is not required for the
-embedded preview. In Docker, install those dependencies in the container's
-mounted checkout:
-
-```sh
-docker compose exec backend sh -c 'cd /site && bun install --frozen-lockfile'
-```
+The backend automatically runs `bun install --frozen-lockfile` in the configured
+checkout before each uncached preview build and serves the result itself. Changes
+to `package.json` or `bun.lock` trigger a fresh install and build on the next preview
+request. The checkout must be writable (including the Docker mount), with registry
+access when packages need downloading. A separate running Vite server is not required.
+Install or build failures can be retried with Retry preview after fixing the cause.
 
 The editor updates the preview as you type without rebuilding for each edit.
 The editor panes fill the available window width, expanding as you zoom out.

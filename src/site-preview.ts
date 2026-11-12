@@ -70,6 +70,24 @@ async function fingerprint(checkout: string): Promise<string> {
   return digest.digest("hex");
 }
 
+async function runPreviewCommand(
+  checkout: string,
+  args: string[],
+): Promise<number> {
+  const child = Bun.spawn([process.execPath, ...args], {
+    cwd: checkout,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const timeout = setTimeout(() => child.kill(), 90_000);
+  const [, , exitCode] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]).finally(() => clearTimeout(timeout));
+  return exitCode;
+}
+
 async function manifest(directory: string): Promise<Build["files"]> {
   const files: Build["files"] = new Map();
   async function visit(relative: string): Promise<void> {
@@ -123,33 +141,29 @@ export async function buildSitePreview(
       const directory = path.join(temporary, "build");
       try {
         const base = `/api/site-preview/builds/${id}/`;
-        const child = Bun.spawn(
-          [
-            process.execPath,
-            "node_modules/vite/bin/vite.js",
-            "build",
-            "--config",
-            "vite.preview.config.ts",
-            "--base",
-            base,
-            "--outDir",
-            directory,
-          ],
-          {
-            cwd: checkout,
-            stdout: "pipe",
-            stderr: "pipe",
-          },
-        );
-        const timeout = setTimeout(() => child.kill(), 90_000);
-        const [, , exitCode] = await Promise.all([
-          new Response(child.stdout).text(),
-          new Response(child.stderr).text(),
-          child.exited,
-        ]).finally(() => clearTimeout(timeout));
+        if (
+          (await runPreviewCommand(checkout, [
+            "install",
+            "--frozen-lockfile",
+          ])) !== 0
+        )
+          throw new SitePublishError(
+            "Could not install preview dependencies. Check the site's package.json and bun.lock, registry access, and checkout write permissions, then retry preview",
+            503,
+          );
+        const exitCode = await runPreviewCommand(checkout, [
+          "node_modules/vite/bin/vite.js",
+          "build",
+          "--config",
+          "vite.preview.config.ts",
+          "--base",
+          base,
+          "--outDir",
+          directory,
+        ]);
         if (exitCode !== 0)
           throw new SitePublishError(
-            "Could not build preview. Run bun install --frozen-lockfile in the site checkout and verify bun run build:preview",
+            "Could not build preview after installing dependencies. Verify bun run build:preview in the site checkout",
             503,
           );
         builds.set(id, { directory, files: await manifest(directory) });
@@ -168,7 +182,7 @@ export async function buildSitePreview(
         await rm(temporary, { recursive: true, force: true });
         if (error instanceof SitePublishError) throw error;
         throw new SitePublishError(
-          "Could not start preview build; install the site's locked dependencies first",
+          "Could not prepare preview; check the site checkout and Bun installation",
           503,
         );
       }
