@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { validateInitialPageContent } from "../../registration-site/src/content";
 import initialContent from "../../registration-site/content/initial-page.json" with { type: "json" };
 
 for (const width of [1280, 390]) {
@@ -6,7 +7,7 @@ for (const width of [1280, 390]) {
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
-    let content = structuredClone(initialContent);
+    let content = validateInitialPageContent(initialContent);
     let revision = "a".repeat(64);
     const snapshot = () => ({
       content,
@@ -28,7 +29,9 @@ for (const width of [1280, 390]) {
       }),
     );
     await page.route("**/api/site-content/publish", async (route) => {
-      content = route.request().postDataJSON().content;
+      content = validateInitialPageContent(
+        route.request().postDataJSON().content,
+      );
       revision = "b".repeat(64);
       await route.fulfill({ json: snapshot() });
     });
